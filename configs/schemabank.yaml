@@ -50,7 +50,7 @@ training:
       tag_curriculum:
         # Progressive dropout: [quarter1, quarter2, quarter3, quarter4]
         # Lower dropout = more tags visible
-        dropout_schedule: [0.0, 0.75, 0.50, 0.25]
+        dropout_schedule: [0.0, 0.25, 0.50, 0.75]
         
     stage2_schema_train:
       steps: 500
@@ -74,6 +74,7 @@ dataset:
   tagging_method: "hash"  # Schema tagging for supervision
   
 evaluation:
+  eval_interval: 50
   num_test_samples: 500
   max_new_tokens: 200
   do_sample: false

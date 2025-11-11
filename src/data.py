@@ -105,9 +105,9 @@ def get_tag_dropout_rate(step, total_steps):
     Gradually reduces tag supervision to force router generalization.
     
     Quarter 1 (0-25%):   0% dropout → 100% tags present (learn mapping)
-    Quarter 2 (25-50%):  75% dropout → 25% tags present (start generalizing)
+    Quarter 2 (25-50%):  25% dropout → 25% tags present (start generalizing)
     Quarter 3 (50-75%):  50% dropout → 50% tags present (more independent)
-    Quarter 4 (75-100%): 25% dropout → 75% tags present (mostly autonomous)
+    Quarter 4 (75-100%): 75% dropout → 75% tags present (mostly autonomous)
     
     Args:
         step: Current training step
@@ -121,11 +121,11 @@ def get_tag_dropout_rate(step, total_steps):
     if progress < 0.25:
         return 0.0    # Keep all tags
     elif progress < 0.50:
-        return 0.75   # Drop 75% of tags
+        return 0.25   # Drop 25% of tags
     elif progress < 0.75:
         return 0.50   # Drop 50% of tags
     else:
-        return 0.25   # Drop 25% of tags
+        return 0.75   # Drop 75% of tags
 
 
 # ========== Dataset Loading ==========
