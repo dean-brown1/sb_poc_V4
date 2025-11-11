@@ -189,17 +189,6 @@ def eval_schema_reuse(model, tokenizer, paraphrase_pairs, device="cuda", topk=2)
 def eval_perplexity(model, tokenizer, dataset, device="cuda", seq_len=512, num_samples=100):
     """
     Evaluate perplexity on dataset at given sequence length
-    
-    Args:
-        model: Model to evaluate
-        tokenizer: Tokenizer
-        dataset: Dataset to evaluate on
-        device: Device
-        seq_len: Sequence length to use
-        num_samples: Number of samples to evaluate
-        
-    Returns:
-        Perplexity (float)
     """
     model.eval()
     
@@ -217,24 +206,36 @@ def eval_perplexity(model, tokenizer, dataset, device="cuda", seq_len=512, num_s
                 text,
                 return_tensors="pt",
                 truncation=True,
-                max_length=seq_len,
-                padding="max_length"
+                max_length=seq_len
             ).to(device)
             
-            outputs = model(**inputs, labels=inputs["input_ids"])
+            input_ids = inputs["input_ids"]
             
-            # Accumulate loss
-            loss = outputs.loss
-            num_tokens = (inputs["input_ids"] != tokenizer.pad_token_id).sum().item()
+            # Get logits
+            outputs = model(input_ids)
+            logits = outputs.logits
             
-            total_loss += loss.item() * num_tokens
+            # Shift for next-token prediction
+            shift_logits = logits[..., :-1, :].contiguous()
+            shift_labels = input_ids[..., 1:].contiguous()
+            
+            # Calculate loss manually with reduction='sum'
+            loss = F.cross_entropy(
+                shift_logits.view(-1, shift_logits.size(-1)),
+                shift_labels.view(-1),
+                reduction='sum'
+            )
+            
+            # Count valid tokens (excluding padding)
+            num_tokens = (shift_labels != tokenizer.pad_token_id).sum().item()
+            
+            total_loss += loss.item()
             total_tokens += num_tokens
     
     avg_loss = total_loss / total_tokens if total_tokens > 0 else float('inf')
     perplexity = torch.exp(torch.tensor(avg_loss)).item()
     
     return perplexity
-
 
 def eval_long_context_stability(model, tokenizer, dataset, device="cuda", num_samples=100):
     """

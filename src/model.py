@@ -162,7 +162,7 @@ def attach_schemabank_last2(model, H, S=32, r=16, topk=2, ad=32):
             h_transformed = adapters[adapter_idx](h)
             
             # Add residual
-            h_out = h + h_transformed
+            h_out = h_transformed
             
             # Return in same format as input
             if isinstance(output, tuple):
