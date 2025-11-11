@@ -1,0 +1,83 @@
+# SchemaBank Configuration: Three-stage training with tag curriculum
+# This config reproduces the 11.8% accuracy result
+
+experiment:
+  name: "schemabank_gsm8k"
+  seed: 42
+  mode: "schemabank"
+  output_dir: "./results/schemabank_seed42"
+
+model:
+  base_model: "Qwen/Qwen2-0.5B"
+  torch_dtype: "bfloat16"
+  device_map: "auto"
+
+lora:
+  r: 8
+  lora_alpha: 16
+  lora_dropout: 0.05
+  target_modules: ["q_proj", "v_proj", "k_proj", "o_proj"]
+  bias: "none"
+  task_type: "CAUSAL_LM"
+
+schemabank:
+  num_schemas: 32
+  rank: 16
+  topk: 2
+  attr_dim: 32
+  layers: "last_2"  # Attach to last 2 transformer blocks
+  
+  regularization:
+    ortho_weight: 0.01
+    
+training:
+  total_steps: 1000
+  batch_size: 1
+  gradient_accumulation_steps: 4
+  seq_len: 2048
+  learning_rate: 1.0e-4
+  weight_decay: 0.01
+  warmup_ratio: 0.05
+  max_grad_norm: 1.0
+  
+  # Three-stage curriculum
+  stages:
+    stage1_router_pretrain:
+      steps: 250
+      description: "Router learns schema mapping with tag supervision"
+      frozen: ["base_model", "lora_adapters", "schema_transforms"]
+      trainable: ["router_weights"]
+      tag_curriculum:
+        # Progressive dropout: [quarter1, quarter2, quarter3, quarter4]
+        # Lower dropout = more tags visible
+        dropout_schedule: [0.0, 0.75, 0.50, 0.25]
+        
+    stage2_schema_train:
+      steps: 500
+      description: "Schemas learn transformations with frozen router"
+      frozen: ["base_model", "router_weights"]
+      trainable: ["schema_transforms", "lora_adapters"]
+      use_tags: false
+      
+    stage3_joint_finetune:
+      steps: 250
+      description: "Joint optimization of router and schemas"
+      frozen: ["base_model"]
+      trainable: ["router_weights", "schema_transforms", "lora_adapters"]
+      use_tags: false
+
+dataset:
+  name: "gsm8k"
+  split_train: "train"
+  split_test: "test"
+  num_train_samples: null  # Use all
+  tagging_method: "hash"  # Schema tagging for supervision
+  
+evaluation:
+  num_test_samples: 500
+  max_new_tokens: 200
+  do_sample: false
+  
+logging:
+  log_every_n_steps: 1
+  save_final_only: true
