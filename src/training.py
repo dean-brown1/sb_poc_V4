@@ -122,6 +122,7 @@ def prepare_model(config, mode='baseline'):
         )
         # adapters are now stored as model.schemabank_adapters by attach_schemabank_last2
         print(f"✓ SchemaBank attached: {sb_config['num_schemas']} schemas, rank {sb_config['rank']}")
+    return model, tokenizer, hidden_size
 
 # ========== Baseline Training ==========
 
