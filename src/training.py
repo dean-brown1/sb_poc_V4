@@ -112,7 +112,7 @@ def prepare_model(config, mode='baseline'):
     # Add SchemaBank if in schemabank mode
     if mode == 'schemabank':
         sb_config = config['schemabank']
-        adapters = attach_schemabank_last2(
+        model = attach_schemabank_last2(
             model,
             H=hidden_size,
             S=sb_config['num_schemas'],
@@ -120,11 +120,8 @@ def prepare_model(config, mode='baseline'):
             topk=sb_config['topk'],
             ad=sb_config['attr_dim']
         )
-        model.schemabank_adapters = adapters
+        # adapters are now stored as model.schemabank_adapters by attach_schemabank_last2
         print(f"✓ SchemaBank attached: {sb_config['num_schemas']} schemas, rank {sb_config['rank']}")
-    
-    return model, tokenizer, hidden_size
-
 
 # ========== Baseline Training ==========
 
