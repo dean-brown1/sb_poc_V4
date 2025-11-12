@@ -44,6 +44,21 @@ def main():
     config = load_config(args.config)
     exp_config = config['experiment']
     
+    # Auto-increment run number if output directory exists
+    base_output = Path(exp_config['output_dir'])
+    if base_output.exists():
+        parent = base_output.parent
+        basename = base_output.name
+        
+        run_num = 1
+        while True:
+            new_output = parent / f"{basename}_run{run_num:03d}"
+            if not new_output.exists():
+                exp_config['output_dir'] = str(new_output)
+                print(f"⚠️  Output directory exists, using: {exp_config['output_dir']}")
+                break
+            run_num += 1
+    
     # Print configuration summary
     print_config_summary(config)
     

@@ -130,54 +130,54 @@ def get_block_list(model):
 
 def attach_schemabank_last2(model, H, S=32, r=16, topk=2, ad=32):
     """
-    Attach SchemaBank adapters to the last 2 transformer blocks
+    Attach SchemaBank adapters as proper submodules (V3 method)
     
-    Args:
-        model: PEFT model with LoRA adapters
-        H: Hidden dimension
-        S, r, topk, ad: SchemaBank hyperparameters
-        
-    Returns:
-        model with schemabank_adapters attribute
+    This makes them part of the model's state_dict and ensures they work in all modes.
     """
     blocks = get_block_list(model)
-    N = len(blocks)
+    idxs = [-2, -1]
     
-    if N < 2:
-        raise ValueError(f"Model has only {N} blocks, need at least 2")
+    try:
+        device = next(model.parameters()).device
+        dtype = next(model.parameters()).dtype
+    except StopIteration:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        dtype = torch.bfloat16
     
-    # Attach to last 2 blocks
-    adapters = nn.ModuleList([SchemaBank(H, S, r, topk, ad) for _ in range(2)])
-    
-    # Move to same device as model
-    device = next(model.parameters()).device
-    adapters = adapters.to(device)
-    
-    # Hook into forward passes
-    target_blocks = [blocks[N-2], blocks[N-1]]
-    
-    def make_hook(adapter_idx):
-        def hook(module, input, output):
-            h = output[0] if isinstance(output, tuple) else output
-            h_transformed = adapters[adapter_idx](h)
+    # Attach SchemaBank as a proper submodule to each block
+    for i, block_idx in enumerate(idxs):
+        block = blocks[block_idx]
+        
+        # Create adapter and register it as a submodule
+        adapter = SchemaBank(H, S, r, topk, ad).to(device=device, dtype=dtype)
+        block.add_module(f'schemabank_adapter', adapter)
+        
+        # Wrap the block's forward method
+        original_forward = block.forward
+        
+        def make_forward(orig_fwd, sb_adapter):
+            def new_forward(hidden_states, *args, **kwargs):
+                # Call original forward
+                output = orig_fwd(hidden_states, *args, **kwargs)
+                
+                # Transform the output
+                if isinstance(output, tuple):
+                    hidden_states_out = output[0]
+                    extras = output[1:]
+                    transformed = sb_adapter(hidden_states_out)
+                    return (transformed,) + extras
+                else:
+                    return sb_adapter(output)
             
-            # Add residual
-            h_out = h_transformed
-            
-            # Return in same format as input
-            if isinstance(output, tuple):
-                return (h_out,) + output[1:]
-            return h_out
-        return hook
+            return new_forward
+        
+        # Replace forward method
+        block.forward = make_forward(original_forward, adapter)
     
-    # Register hooks
-    for idx, block in enumerate(target_blocks):
-        block.register_forward_hook(make_hook(idx))
+    # Store reference to adapters
+    adapters = nn.ModuleList([blocks[li].schemabank_adapter for li in idxs])
     
-    # Store adapters on model for access
-    model.schemabank_adapters = adapters
-    
-    return model
+    return adapters
 
 
 def get_schemabank_parameters(model):
