@@ -130,9 +130,7 @@ def get_block_list(model):
 
 def attach_schemabank_last2(model, H, S=32, r=16, topk=2, ad=32):
     """
-    Attach SchemaBank adapters as proper submodules (V3 method)
-    
-    This makes them part of the model's state_dict and ensures they work in all modes.
+    Attach SchemaBank adapters as proper submodules (V3 method - FIXED)
     """
     blocks = get_block_list(model)
     idxs = [-2, -1]
@@ -144,23 +142,27 @@ def attach_schemabank_last2(model, H, S=32, r=16, topk=2, ad=32):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         dtype = torch.bfloat16
     
+    adapters = []
+    
     # Attach SchemaBank as a proper submodule to each block
     for i, block_idx in enumerate(idxs):
         block = blocks[block_idx]
         
         # Create adapter and register it as a submodule
         adapter = SchemaBank(H, S, r, topk, ad).to(device=device, dtype=dtype)
-        block.add_module(f'schemabank_adapter', adapter)
+        block.add_module('schemabank_adapter', adapter)
+        adapters.append(adapter)
         
-        # Wrap the block's forward method
+        # Store original forward for this specific block
         original_forward = block.forward
         
-        def make_forward(orig_fwd, sb_adapter):
+        # Create wrapper that captures THIS specific adapter
+        def make_forward_wrapper(orig_fwd, sb_adapter):
             def new_forward(hidden_states, *args, **kwargs):
                 # Call original forward
                 output = orig_fwd(hidden_states, *args, **kwargs)
                 
-                # Transform the output
+                # Transform the output using THIS adapter
                 if isinstance(output, tuple):
                     hidden_states_out = output[0]
                     extras = output[1:]
@@ -171,12 +173,11 @@ def attach_schemabank_last2(model, H, S=32, r=16, topk=2, ad=32):
             
             return new_forward
         
-        # Replace forward method
-        block.forward = make_forward(original_forward, adapter)
+        # Replace forward method with wrapped version
+        block.forward = make_forward_wrapper(original_forward, adapter)
     
-    # Store reference to adapters
-    adapters = nn.ModuleList([blocks[block_idx].schemabank_adapter for block_idx in idxs])
-    model.schemabank_adapters = adapters
+    # Store reference to adapters on the model
+    model.schemabank_adapters = nn.ModuleList(adapters)
     
     return model
 
