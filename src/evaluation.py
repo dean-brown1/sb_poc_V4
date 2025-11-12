@@ -48,7 +48,7 @@ def extract_generated_number(text):
         Last number found in text, or None if no numbers found
     """
     numbers = re.findall(r'\b\d+\b', text)
-    return numbers[-1] if numbers else None
+    return numbers[0] if numbers else None  # Use FIRST number (the answer)
 
 
 def eval_gsm8k_accuracy(model, tokenizer, test_dataset, device="cuda", max_samples=500):
