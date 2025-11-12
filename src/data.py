@@ -1,41 +1,52 @@
 """
-FIXED: Add explicit instruction to prevent code generation
+Data Preparation Module
+
+Includes:
+- GSM8K dataset loading and formatting
+- Schema tagging (hash-based and content-based)
+- Tag dropout curriculum
+- Data collation and packing
 """
+
 import re
 import random
 import torch
 from datasets import Dataset, load_dataset
 from torch.utils.data import DataLoader
 
-# ... (keep all other functions the same) ...
 
-def format_gsm8k_example(example, schema_tags=None):
-    """
-    Format GSM8K example with instruction to prevent code generation
-    """
-    question = example["question"]
-    answer = example["answer"]
-    
-    # Extract final numerical answer
-    match = re.search(r'####\s*(-?\d+(?:,\d+)*(?:\.\d+)?)', answer)
-    if match:
-        final_answer = match.group(1).replace(',', '')
-    else:
-        final_answer = "unknown"
-    
-    # Add instruction to prevent code generation
-    instruction = "Solve this math problem and give only the final numerical answer."
-    
-    # Prepend schema tags if provided
-    if schema_tags is not None:
-        tag_str = ",".join(map(str, schema_tags))
-        text = f"[Schema: {tag_str}] {instruction}\nQuestion: {question}\nAnswer: {final_answer}"
-    else:
-        text = f"{instruction}\nQuestion: {question}\nAnswer: {final_answer}"
-    
-    return text
+# ========== Schema Tagging ==========
 
-# ... (keep rest of file the same) ...
+def assign_schema_tags_hash(question, num_schemas=32):
+    """
+    Deterministic hash-based schema assignment
+    
+    Ensures same question → same schemas across runs.
+    Simple, no manual labeling needed.
+    
+    Args:
+        question: Question text
+        num_schemas: Total number of schemas
+        
+    Returns:
+        List of 2 schema indices (sorted)
+    """
+    h = hash(question)
+    schema_1 = h % num_schemas
+    schema_2 = (h // num_schemas) % num_schemas
+    return sorted([schema_1, schema_2])
+
+
+def assign_schema_tags_content(question, num_schemas=32):
+    """
+    Content-based schema assignment (OPTIONAL - more accurate)
+    
+    Assigns schemas based on detected operations and complexity.
+    Can be enabled by changing tagging_method parameter.
+    
+    Schema allocation:
+    - 0-7:   Addition (simple → complex)
+    - 8-15:  Subtraction
     - 16-23: Multiplication
     - 24-31: Division & Multi-step
     
@@ -93,10 +104,10 @@ def get_tag_dropout_rate(step, total_steps):
     
     Gradually reduces tag supervision to force router generalization.
     
-    Quarter 1 (0-25%):   0% dropout -> 100% tags present (learn mapping)
-    Quarter 2 (25-50%):  25% dropout -> 25% tags present (start generalizing)
-    Quarter 3 (50-75%):  50% dropout -> 50% tags present (more independent)
-    Quarter 4 (75-100%): 75% dropout -> 75% tags present (mostly autonomous)
+    Quarter 1 (0-25%):   0% dropout → 100% tags present (learn mapping)
+    Quarter 2 (25-50%):  25% dropout → 25% tags present (start generalizing)
+    Quarter 3 (50-75%):  50% dropout → 50% tags present (more independent)
+    Quarter 4 (75-100%): 75% dropout → 75% tags present (mostly autonomous)
     
     Args:
         step: Current training step
