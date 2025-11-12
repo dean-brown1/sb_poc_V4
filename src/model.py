@@ -175,9 +175,10 @@ def attach_schemabank_last2(model, H, S=32, r=16, topk=2, ad=32):
         block.forward = make_forward(original_forward, adapter)
     
     # Store reference to adapters
-    adapters = nn.ModuleList([blocks[li].schemabank_adapter for li in idxs])
+    adapters = nn.ModuleList([blocks[block_idx].schemabank_adapter for block_idx in idxs])
+    model.schemabank_adapters = adapters
     
-    return adapters
+    return model
 
 
 def get_schemabank_parameters(model):
