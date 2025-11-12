@@ -226,9 +226,9 @@ def train_stage1_router(model, tagged_data, tokenizer, config, telemetry_logger)
     
     Progressive tag dropout:
     - 0-25% steps:   100% tags (learn schema mapping)
-    - 25-50% steps:   25% tags (start generalizing)
+    - 25-50% steps:   75% tags (start generalizing)
     - 50-75% steps:   50% tags (more independent)
-    - 75-100% steps:  75% tags (mostly autonomous)
+    - 75-100% steps:  25% tags (mostly autonomous)
     
     Args:
         model: Model with SchemaBank
@@ -252,9 +252,9 @@ def train_stage1_router(model, tagged_data, tokenizer, config, telemetry_logger)
     print(f"Steps: {steps}")
     print("\nTag Schedule:")
     print("  Quarter 1 (0-25%):   100% tags → Learn mapping")
-    print("  Quarter 2 (25-50%):   25% tags → Start generalizing")
+    print("  Quarter 2 (25-50%):   75% tags → Start generalizing")
     print("  Quarter 3 (50-75%):   50% tags → More independent")
-    print("  Quarter 4 (75-100%):  75% tags → Mostly autonomous")
+    print("  Quarter 4 (75-100%):  25% tags → Mostly autonomous")
     print("="*70 + "\n")
     
     # Freeze everything except router
