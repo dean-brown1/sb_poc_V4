@@ -28,7 +28,7 @@ schemabank:
   layers: "last_2"  # Attach to last 2 transformer blocks
   
   regularization:
-    ortho_weight: 0.01
+    ortho_weight: 0.0001
     
 training:
   total_steps: 1000
