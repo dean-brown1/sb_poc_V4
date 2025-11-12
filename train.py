@@ -106,6 +106,21 @@ def main():
     else:  # schemabank
         model = train_schemabank(model, tagged_data, tokenizer, config, telemetry_logger)
     
+        # DEBUG: Check if SchemaBank is still attached
+    print("\n=== DEBUG: Checking model state after training ===")
+    print(f"Has schemabank_adapters: {hasattr(model, 'schemabank_adapters')}")
+    if hasattr(model, 'schemabank_adapters'):
+        print(f"Number of adapters: {len(model.schemabank_adapters)}")
+        # Check if hooks are still registered
+        from src.model import get_block_list
+        blocks = get_block_list(model)
+        for i, idx in enumerate([-2, -1]):
+            block = blocks[idx]
+            print(f"Block {idx}: hooks={len(block._forward_hooks)}, has_adapter_module={hasattr(block, 'schemabank_adapter')}")
+    else:
+        print("⚠️ WARNING: SchemaBank adapters are MISSING after training!")
+    
+
     # Close telemetry logger
     telemetry_logger.close()
     
