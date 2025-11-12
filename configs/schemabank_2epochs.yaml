@@ -27,7 +27,7 @@ schemabank:
     ortho_weight: 0.0001
 
 training:
-  total_steps: 3736  # 2 epochs = 1868 * 2
+  total_steps: 3736
   batch_size: 1
   gradient_accumulation_steps: 4
   seq_len: 2048
@@ -38,7 +38,7 @@ training:
   
   stages:
     stage1_router_pretrain:
-      steps: 934   # 0.5 epoch
+      steps: 934
       description: "Router learns schema mapping"
       frozen: ["base_model", "lora_adapters", "schema_transforms"]
       trainable: ["router_weights"]
@@ -46,14 +46,14 @@ training:
         dropout_schedule: [0.0, 0.25, 0.5, 0.75]
         
     stage2_schema_train:
-      steps: 1868  # 1 full epoch
+      steps: 1868
       description: "Schemas learn transformations"
       frozen: ["base_model", "router_weights"]
       trainable: ["schema_transforms", "lora_adapters"]
       use_tags: false
       
     stage3_joint_finetune:
-      steps: 934   # 0.5 epoch
+      steps: 934
       description: "Joint optimization"
       frozen: ["base_model"]
       trainable: ["router_weights", "schema_transforms", "lora_adapters"]
