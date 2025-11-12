@@ -1,211 +1,22 @@
-# SchemaBank V4 - .gitignore
+# Backup files
+*.backup
+*_backup.py
 
-# ============================================================================
-# Python
-# ============================================================================
+# Test configs (keep only production ones)
+configs/*_quick.yaml
+configs/*_medium.yaml
+configs/*_moresteps.yaml
 
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# C extensions
-*.so
-
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# PyInstaller
-*.manifest
-*.spec
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.log
-.hypothesis/
-.pytest_cache/
-cover/
-
-# Virtual environments
-venv/
-env/
-ENV/
-env.bak/
-venv.bak/
-ai-venv/
-
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-
-# Jupyter Notebook
-.ipynb_checkpoints
-*.ipynb
-
-# ============================================================================
-# Machine Learning Specific
-# ============================================================================
-
-# Model checkpoints and results
+# Training outputs
 results/
-checkpoints/
-ckpt/
-outputs/
-runs/
-logs/
+*.log
+nohup.out
 
-# Keep example results structure but ignore contents
-!results/.gitkeep
-!checkpoints/.gitkeep
+# Python cache
+__pycache__/
+*.pyc
+.pytest_cache/
 
-# Cached datasets
-data/
-.cache/
-datasets/
-
-# Hugging Face cache
-.huggingface/
-transformers_cache/
-
-# Weights & Biases
-wandb/
-
-# TensorBoard
-events.out.tfevents.*
-
-# ============================================================================
-# Training Artifacts
-# ============================================================================
-
-# Training logs
-*.jsonl
-training_log.jsonl
-telemetry*.json
-
-# Model files (large binaries)
-*.bin
-*.pt
-*.pth
-*.ckpt
-*.safetensors
-pytorch_model.bin
-adapter_model.bin
-schemabank_adapters.pt
-
-# Tokenizer vocab files (if large)
-# vocab.json
-# merges.txt
-# tokenizer.json
-
-# Config files are small, keep them
-!*_config.json
-!config.yaml
-!*.yaml
-
-# ============================================================================
-# Experimental / Temporary
-# ============================================================================
-
-# Scratch files
-scratch/
-tmp/
-temp/
-experiments/
-archive/
-
-# Old versions
-*_old/
-*_backup/
-*_v[0-9]/
-*_v[0-9][0-9]/
-
-# Archives
-*.tar.gz
-*.zip
-*.tar
-*.tgz
-
-# ============================================================================
-# System Files
-# ============================================================================
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# ============================================================================
-# Project Specific
-# ============================================================================
-
-# Keep smoke test config but ignore smoke test results
-!configs/smoke_test.yaml
-results/smoke_test/
-
-# Ignore personal experiment configs
-configs/experiment_*.yaml
-configs/dev_*.yaml
-configs/test_*.yaml
-
-# Keep baseline and schemabank configs
-!configs/baseline.yaml
-!configs/schemabank.yaml
-
-# Analysis notebooks and plots
-analysis/
-plots/
-figures/*.png
-figures/*.pdf
-!figures/.gitkeep
-
-# Personal notes
-NOTES.md
-TODO.md
-PERSONAL*.md
-
-# ============================================================================
-# Optional: Uncomment if you want to track certain files
-# ============================================================================
-
-# Track small model files if needed (< 100MB)
-# !*.safetensors
-
-# Track example results for documentation
-# !results/example_baseline/results.json
-# !results/example_schemabank/results.json
-
-# Track training curves data
-# !results/*/training_summary.csv
+# Virtual environment
+ai-venv/
+venv/
