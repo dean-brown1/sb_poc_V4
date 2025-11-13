@@ -105,7 +105,6 @@ def load_model_from_checkpoint(checkpoint_path):
             
             def make_forward_wrapper(orig_fwd, sb_adapter):
                 def new_forward(hidden_states, *args, **kwargs):
-                    print(f"[DEBUG] SchemaBank forward called! Input shape: {hidden_states.shape}")  # ADD THIS
                     output = orig_fwd(hidden_states, *args, **kwargs)
                     if isinstance(output, tuple):
                         hidden_states_out = output[0]
