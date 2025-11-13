@@ -92,6 +92,30 @@ def load_model_from_checkpoint(checkpoint_path):
 
         # Load adapter_1 into schemabank_adapters.1  
         model.schemabank_adapters[1].load_state_dict(sb_state['adapter_1'])
+
+        # CRITICAL: Re-wrap the forward methods (they don't persist in checkpoints)
+        from src.model import get_block_list
+        blocks = get_block_list(model)
+        idxs = [-2, -1]
+
+        for i, block_idx in enumerate(idxs):
+            block = blocks[block_idx]
+            adapter = model.schemabank_adapters[i]
+            original_forward = block.forward
+            
+            def make_forward_wrapper(orig_fwd, sb_adapter):
+                def new_forward(hidden_states, *args, **kwargs):
+                    output = orig_fwd(hidden_states, *args, **kwargs)
+                    if isinstance(output, tuple):
+                        hidden_states_out = output[0]
+                        extras = output[1:]
+                        transformed = sb_adapter(hidden_states_out)
+                        return (transformed,) + extras
+                    else:
+                        return sb_adapter(output)
+                return new_forward
+            
+            block.forward = make_forward_wrapper(original_forward, adapter)
         
         print(f"✓ SchemaBank loaded: {sb_config['num_schemas']} schemas, rank {sb_config['rank']}")
         has_schemabank = True
