@@ -52,6 +52,14 @@ def load_model_from_checkpoint(checkpoint_path):
         device_map="auto"
     )
     
+    # CRITICAL: Set to evaluation mode
+    model.eval()
+    
+    # Explicitly disable dropout
+    for m in model.modules():
+        if isinstance(m, torch.nn.Dropout):
+            m.p = 0.0
+    
     # Check if SchemaBank adapters exist
     sb_path = checkpoint_path / 'schemabank_adapters.pt'
     config_path = checkpoint_path / 'schemabank_config.json'
