@@ -87,7 +87,7 @@ def load_model_from_checkpoint(checkpoint_path):
         
         # Load weights
         sb_state = torch.load(sb_path, map_location='cpu')
-        for i, adapter in enumerate(model.schemabank_adapters):
+        for i, adapter in enumerate(adapters):
             adapter.load_state_dict(sb_state[f'adapter_{i}'])
         
         print(f"✓ SchemaBank loaded: {sb_config['num_schemas']} schemas, rank {sb_config['rank']}")
