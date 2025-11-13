@@ -80,8 +80,6 @@ class SchemaBank(nn.Module):
         gate = (g @ aw).unsqueeze(-1)  # (B, T, 1)
         out = out * (0.9 + 0.2 * gate)  # Scale output
         out = h + out  # ADD RESIDUAL CONNECTION
-
-        print(f"[DEBUG SchemaBank] Output: mean={out.mean():.4f}, std={out.std():.4f}")
         
         return (out, g) if return_gate else out
 
