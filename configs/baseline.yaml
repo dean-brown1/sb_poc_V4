@@ -24,7 +24,7 @@ training:
   total_steps: 1000
   batch_size: 1
   gradient_accumulation_steps: 4
-  seq_len: 2048
+  seq_len: 4096
   learning_rate: 1.0e-4
   weight_decay: 0.01
   warmup_ratio: 0.05
