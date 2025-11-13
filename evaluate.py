@@ -74,8 +74,8 @@ def load_model_from_checkpoint(checkpoint_path):
         with open(config_path, 'r') as f:
             sb_config = json.load(f)
         
-        # Attach SchemaBank
-        adapters = attach_schemabank_last2(
+        # Attach SchemaBank - modifies model in-place
+        attach_schemabank_last2(
             model,
             H=sb_config['hidden_size'],
             S=sb_config['num_schemas'],
@@ -83,20 +83,17 @@ def load_model_from_checkpoint(checkpoint_path):
             topk=sb_config['topk'],
             ad=32
         )
-        model.schemabank_adapters = adapters
         
-        # Load weights
+        # Load weights directly
         sb_state = torch.load(sb_path, map_location='cpu')
-        for i, adapter in enumerate(adapters):
-            adapter.load_state_dict(sb_state[f'adapter_{i}'])
+        model.load_state_dict(sb_state, strict=False)
         
         print(f"✓ SchemaBank loaded: {sb_config['num_schemas']} schemas, rank {sb_config['rank']}")
         has_schemabank = True
     else:
         print("✓ Baseline model loaded (no SchemaBank)")
-    
-    return model, tokenizer, has_schemabank
 
+    return model, tokenizer, has_schemabank
 
 def main():
     parser = argparse.ArgumentParser(description="Evaluate trained model")
