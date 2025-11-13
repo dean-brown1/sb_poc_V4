@@ -58,7 +58,6 @@ class SchemaBank(nn.Module):
         """
         B, T, H = h.shape
         
-        print(f"[DEBUG SchemaBank] Input: mean={h.mean():.4f}, std={h.std():.4f}")
 
         # Router selection: top-k sparse softmax
         sc = self.router(h)  # (B, T, S)
