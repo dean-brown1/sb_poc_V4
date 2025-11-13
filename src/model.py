@@ -58,6 +58,8 @@ class SchemaBank(nn.Module):
         """
         B, T, H = h.shape
         
+        print(f"[DEBUG SchemaBank] Input: mean={h.mean():.4f}, std={h.std():.4f}")
+
         # Router selection: top-k sparse softmax
         sc = self.router(h)  # (B, T, S)
         idx = sc.topk(self.topk, dim=-1).indices
@@ -77,6 +79,9 @@ class SchemaBank(nn.Module):
         aw = torch.sigmoid(self.aproj(self.attr).squeeze(-1))  # (S,)
         gate = (g @ aw).unsqueeze(-1)  # (B, T, 1)
         out = out * (0.9 + 0.2 * gate)  # Scale output
+        out = h + out  # ADD RESIDUAL CONNECTION
+
+        print(f"[DEBUG SchemaBank] Output: mean={out.mean():.4f}, std={out.std():.4f}")
         
         return (out, g) if return_gate else out
 
