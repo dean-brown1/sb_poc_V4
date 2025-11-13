@@ -84,9 +84,14 @@ def load_model_from_checkpoint(checkpoint_path):
             ad=32
         )
         
-        # Load weights directly
+        # Load weights - adapters are saved as nested dicts
         sb_state = torch.load(sb_path, map_location='cpu')
-        model.load_state_dict(sb_state, strict=False)
+
+        # Load adapter_0 into schemabank_adapters.0
+        model.schemabank_adapters[0].load_state_dict(sb_state['adapter_0'])
+
+        # Load adapter_1 into schemabank_adapters.1  
+        model.schemabank_adapters[1].load_state_dict(sb_state['adapter_1'])
         
         print(f"✓ SchemaBank loaded: {sb_config['num_schemas']} schemas, rank {sb_config['rank']}")
         has_schemabank = True
