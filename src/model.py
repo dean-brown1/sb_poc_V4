@@ -78,7 +78,7 @@ class SchemaBank(nn.Module):
         aw = torch.sigmoid(self.aproj(self.attr).squeeze(-1))  # (S,)
         gate = (g @ aw).unsqueeze(-1)  # (B, T, 1)
         out = out * (0.9 + 0.2 * gate)  # Scale output
-        out = h + out  # ADD RESIDUAL CONNECTION
+        # out = h + out  # REMOVE for accuracy increase
         
         return (out, g) if return_gate else out
 
