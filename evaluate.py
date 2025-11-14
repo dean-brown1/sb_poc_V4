@@ -36,6 +36,9 @@ def load_model_from_checkpoint(checkpoint_path):
     Returns:
         (model, tokenizer, has_schemabank)
     """
+    # TOGGLE: Set to False for LoRA-only evaluation, True for full SchemaBank
+    load_schemabank = False
+    
     checkpoint_path = Path(checkpoint_path)
     
     print(f"Loading model from {checkpoint_path}...")
@@ -52,20 +55,12 @@ def load_model_from_checkpoint(checkpoint_path):
         device_map="auto"
     )
     
-    # CRITICAL: Set to evaluation mode
-    model.eval()
-    
-    # Explicitly disable dropout
-    for m in model.modules():
-        if isinstance(m, torch.nn.Dropout):
-            m.p = 0.0
-    
     # Check if SchemaBank adapters exist
     sb_path = checkpoint_path / 'schemabank_adapters.pt'
     config_path = checkpoint_path / 'schemabank_config.json'
     has_schemabank = False
     
-    if sb_path.exists() and config_path.exists():
+    if sb_path.exists() and config_path.exists() and load_schemabank:
         print("Loading SchemaBank adapters...")
         
         from src.model import attach_schemabank_last2
@@ -74,8 +69,8 @@ def load_model_from_checkpoint(checkpoint_path):
         with open(config_path, 'r') as f:
             sb_config = json.load(f)
         
-        # Attach SchemaBank - modifies model in-place
-        attach_schemabank_last2(
+        # Attach SchemaBank
+        adapters = attach_schemabank_last2(
             model,
             H=sb_config['hidden_size'],
             S=sb_config['num_schemas'],
@@ -83,45 +78,18 @@ def load_model_from_checkpoint(checkpoint_path):
             topk=sb_config['topk'],
             ad=32
         )
+        model.schemabank_adapters = adapters
         
-        # Load weights - adapters are saved as nested dicts
+        # Load weights
         sb_state = torch.load(sb_path, map_location='cpu')
-
-        # Load adapter_0 into schemabank_adapters.0
-        model.schemabank_adapters[0].load_state_dict(sb_state['adapter_0'])
-
-        # Load adapter_1 into schemabank_adapters.1  
-        model.schemabank_adapters[1].load_state_dict(sb_state['adapter_1'])
-
-        # CRITICAL: Re-wrap the forward methods (they don't persist in checkpoints)
-        from src.model import get_block_list
-        blocks = get_block_list(model)
-        idxs = [-2, -1]
-
-        for i, block_idx in enumerate(idxs):
-            block = blocks[block_idx]
-            adapter = model.schemabank_adapters[i]
-            original_forward = block.forward
-            
-            def make_forward_wrapper(orig_fwd, sb_adapter):
-                def new_forward(hidden_states, *args, **kwargs):
-                    output = orig_fwd(hidden_states, *args, **kwargs)
-                    if isinstance(output, tuple):
-                        hidden_states_out = output[0]
-                        extras = output[1:]
-                        transformed = sb_adapter(hidden_states_out)
-                        return (transformed,) + extras
-                    else:
-                        return sb_adapter(output)
-                return new_forward
-            
-            block.forward = make_forward_wrapper(original_forward, adapter)
+        for i, adapter in enumerate(model.schemabank_adapters):
+            adapter.load_state_dict(sb_state[f'adapter_{i}'])
         
         print(f"✓ SchemaBank loaded: {sb_config['num_schemas']} schemas, rank {sb_config['rank']}")
         has_schemabank = True
     else:
         print("✓ Baseline model loaded (no SchemaBank)")
-
+    
     return model, tokenizer, has_schemabank
 
 def main():
