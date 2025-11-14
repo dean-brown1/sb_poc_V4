@@ -139,37 +139,37 @@ def main():
     # Close telemetry logger
     telemetry_logger.close()
     
-    print("\n" + "="*70)
-    print("PHASE 4: Evaluation")
-    print("="*70)
+    # print("\n" + "="*70)
+    # print("PHASE 4: Evaluation")
+    # print("="*70)
     
-    # Evaluate on GSM8K test set
-    print("\nEvaluating GSM8K accuracy...")
-    gsm8k_results = eval_gsm8k_accuracy(
-        model,
-        tokenizer,
-        gsm8k_test,
-        device="cuda",
-        max_samples=config['evaluation']['num_test_samples']
-    )
+    # # Evaluate on GSM8K test set
+    # print("\nEvaluating GSM8K accuracy...")
+    # gsm8k_results = eval_gsm8k_accuracy(
+    #     model,
+    #     tokenizer,
+    #     gsm8k_test,
+    #     device="cuda",
+    #     max_samples=config['evaluation']['num_test_samples']
+    # )
     
-    print(f"\n✓ GSM8K Results:")
-    print(f"  Accuracy: {gsm8k_results['accuracy']:.1%} ({gsm8k_results['correct']}/{gsm8k_results['total']})")
+    # print(f"\n✓ GSM8K Results:")
+    # print(f"  Accuracy: {gsm8k_results['accuracy']:.1%} ({gsm8k_results['correct']}/{gsm8k_results['total']})")
     
-    # Evaluate perplexity and long-context stability
-    print("\nEvaluating long-context stability...")
-    lc_results = eval_long_context_stability(
-        model,
-        tokenizer,
-        gsm8k_test,
-        device="cuda",
-        num_samples=100
-    )
+    # # Evaluate perplexity and long-context stability
+    # print("\nEvaluating long-context stability...")
+    # lc_results = eval_long_context_stability(
+    #     model,
+    #     tokenizer,
+    #     gsm8k_test,
+    #     device="cuda",
+    #     num_samples=100
+    # )
     
-    print(f"\n✓ Long-Context Stability:")
-    print(f"  PPL (512 tokens):  {lc_results['ppl_512']:.2f}")
-    print(f"  PPL (4096 tokens): {lc_results['ppl_4096']:.2f}")
-    print(f"  Relative gap:      {lc_results['rel_gap']:.4f}")
+    # print(f"\n✓ Long-Context Stability:")
+    # print(f"  PPL (512 tokens):  {lc_results['ppl_512']:.2f}")
+    # print(f"  PPL (4096 tokens): {lc_results['ppl_4096']:.2f}")
+    # print(f"  Relative gap:      {lc_results['rel_gap']:.4f}")
     
     print("\n" + "="*70)
     print("PHASE 5: Saving Results")
@@ -208,19 +208,19 @@ def main():
     training_log = load_training_log(log_path)
     training_summary = compute_training_summary(training_log)
     
-    # Compile evaluation results
-    evaluation_results = {
-        'gsm8k': gsm8k_results,
-        'long_context': lc_results
-    }
+    # # Compile evaluation results
+    # evaluation_results = {
+    #     'gsm8k': gsm8k_results,
+    #     'long_context': lc_results
+    # }
     
-    # Save complete experiment results
-    save_experiment_results(
-        output_dir,
-        config,
-        training_summary,
-        evaluation_results
-    )
+    # # Save complete experiment results
+    # save_experiment_results(
+    #     output_dir,
+    #     config,
+    #     training_summary,
+    #     evaluation_results
+    # )
     
     print("\n" + "="*70)
     print("✅ TRAINING COMPLETE")
