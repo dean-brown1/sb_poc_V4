@@ -27,6 +27,69 @@ from .model import attach_schemabank_last2
 from datasets import Dataset
 from torch.utils.data import DataLoader
 
+import re
+
+def extract_tags_from_text(text):
+    """
+    Extract schema tags from formatted text
+    Example: "[Schema: 5,12] Question: ..." -> [5, 12]
+    Returns None if no tags found
+    """
+    match = re.search(r'\[Schema:\s*(\d+),(\d+)\]', text)
+    if match:
+        return [int(match.group(1)), int(match.group(2))]
+    return None
+
+def log_routing_alignment(model, batch, tokenizer, step, stage, tag_dropout, telemetry_logger):
+    """
+    Log routing decisions vs input tags
+    
+    Compares what tags suggested vs what router actually chose.
+    Only logs when tags are present (dropout < 1.0)
+    """
+    device = next(model.parameters()).device
+    
+    # Decode first example to get tags
+    input_ids = batch['input_ids'][0]
+    text = tokenizer.decode(input_ids, skip_special_tokens=True)
+    input_tags = extract_tags_from_text(text)
+    
+    if input_tags is None:
+        return  # No tags present due to dropout
+    
+    # Get routing decision from model
+    with torch.no_grad():
+        outputs = model(**batch, output_hidden_states=True)
+        hidden_states = outputs.hidden_states[-1]
+        
+        adapters = getattr(model, 'schemabank_adapters', None)
+        if not adapters:
+            return
+        
+        # Get routing from last adapter
+        adapter = adapters[-1]
+        _, gates = adapter(hidden_states, return_gate=True)
+        
+        # Average over sequence, get top-2 from first example
+        avg_gates = gates[0].mean(dim=0).cpu()  # (S,)
+        top2_weights, top2_indices = avg_gates.topk(2)
+        router_decision = top2_indices.tolist()
+        router_weights = top2_weights.tolist()
+    
+    # Calculate alignment: how many tags match router decision?
+    alignment = len(set(input_tags) & set(router_decision)) / 2.0
+    
+    # Log to telemetry
+    telemetry_logger.log_routing({
+        'step': step,
+        'stage': stage,
+        'input_tags': input_tags,
+        'router_decision': router_decision,
+        'router_weights': router_weights,
+        'alignment': alignment,
+        'tag_dropout': tag_dropout
+    })
+
 
 def load_base_model_and_tokenizer(model_name, torch_dtype=torch.bfloat16):
     """
@@ -339,6 +402,12 @@ def train_stage1_router(model, tagged_data, tokenizer, config, telemetry_logger)
             'grad_norm': grad_norm
         })
         
+        if (step + 1) % 10 == 0 and dropout_rate < 1.0:
+            log_routing_alignment(
+                model, batch, tokenizer,
+                step + 1, 'stage1_router_pretrain',
+                dropout_rate, telemetry_logger
+            )
         step += 1
         pbar.update(1)
     
