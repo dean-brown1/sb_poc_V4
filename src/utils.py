@@ -117,15 +117,32 @@ class TelemetryLogger:
         # Flush every 10 steps to ensure data is written
         if step % 10 == 0:
             self.log_file.flush()
-    
-    def close(self):
-        """Close log file"""
-        if self.log_file:
-            self.log_file.close()
-    
+        
     def __del__(self):
         """Ensure file is closed"""
         self.close()
+
+    def log_routing(self, data):
+        """
+        Log routing alignment data to separate file
+        
+        Args:
+            data: Dict with routing alignment info
+        """
+        # Create routing log file if it doesn't exist
+        if not hasattr(self, 'routing_log_file'):
+            routing_path = str(self.log_path).replace('training_log.jsonl', 'routing_alignment.jsonl')
+            self.routing_log_file = open(routing_path, 'w')
+        
+        self.routing_log_file.write(json.dumps(data) + '\n')
+        self.routing_log_file.flush()
+    
+    def close(self):
+        """Close log files"""
+        if self.log_file:
+            self.log_file.close()
+        if hasattr(self, 'routing_log_file') and self.routing_log_file:
+            self.routing_log_file.close()
 
 
 def save_experiment_results(output_dir, config, training_summary, evaluation_results):
