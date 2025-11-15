@@ -94,7 +94,7 @@ def eval_gsm8k_accuracy(model, tokenizer, test_dataset, device="cuda", max_sampl
             total += 1
             
             # Generate answer
-            prompt = f"{question}\nThe answer is:"
+            prompt = f"{question}\nThe answer is: "
             inputs = tokenizer(
                 prompt, 
                 return_tensors="pt", 
