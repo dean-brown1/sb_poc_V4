@@ -1,5 +1,5 @@
 experiment:
-  name: "schemabank_2epochs_v2"
+  name: "schemabank_10epochs_v2"
   seed: 42
   mode: "schemabank"
   output_dir: "./results/schemabank_10epochs"
