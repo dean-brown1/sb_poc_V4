@@ -2,7 +2,7 @@ experiment:
   name: "schemabank_2epochs_v2"
   seed: 42
   mode: "schemabank"
-  output_dir: "./results/schemabank_2epochs"
+  output_dir: "./results/schemabank_10epochs"
 
 model:
   base_model: "Qwen/Qwen2-0.5B"
@@ -27,7 +27,7 @@ schemabank:
     ortho_weight: 0.0001
 
 training:
-  total_steps: 3736
+  total_steps: 18680
   batch_size: 1
   gradient_accumulation_steps: 4
   seq_len: 4096
@@ -38,7 +38,7 @@ training:
   
   stages:
     stage1_router_pretrain:
-      steps: 934
+      steps: 4670
       description: "Router learns schema mapping"
       frozen: ["base_model", "lora_adapters", "schema_transforms"]
       trainable: ["router_weights"]
@@ -46,14 +46,14 @@ training:
         dropout_schedule: [0.0, 0.25, 0.5, 0.75]
         
     stage2_schema_train:
-      steps: 1868
+      steps: 9340
       description: "Schemas learn transformations"
       frozen: ["base_model", "router_weights"]
       trainable: ["schema_transforms", "lora_adapters"]
       use_tags: false
       
     stage3_joint_finetune:
-      steps: 934
+      steps: 4670
       description: "Joint optimization"
       frozen: ["base_model"]
       trainable: ["router_weights", "schema_transforms", "lora_adapters"]

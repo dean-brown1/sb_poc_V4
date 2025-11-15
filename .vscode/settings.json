@@ -1,5 +1,11 @@
 {
     "cSpell.words": [
-        "schemabank"
+        "bfloat",
+        "dtype",
+        "finetune",
+        "pretrain",
+        "Qwen",
+        "schemabank",
+        "topk"
     ]
 }
