@@ -4,7 +4,7 @@ experiment:
   name: "baseline_adapters"
   seed: 42
   mode: "baseline"
-  output_dir: "./results/baseline_10epochs"
+  output_dir: "./results/baseline_4epochs"
 
 model:
   base_model: "Qwen/Qwen2-0.5B"

@@ -4,7 +4,7 @@ experiment:
   name: "baseline_adapters"
   seed: 42
   mode: "baseline"
-  output_dir: "./results/baseline_10epochs"
+  output_dir: "./results/baseline_6epochs"
 
 model:
   base_model: "Qwen/Qwen2-0.5B"
@@ -20,7 +20,7 @@ lora:
   task_type: "CAUSAL_LM"
 
 training:
-  total_steps: 7472
+  total_steps: 11208
   batch_size: 1
   gradient_accumulation_steps: 4
   seq_len: 4096
