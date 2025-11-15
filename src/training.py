@@ -351,6 +351,7 @@ def train_stage1_router(model, tagged_data, tokenizer, config, telemetry_logger)
     pbar = tqdm(total=steps, desc="Stage 1: Router + Tags")
     last_quarter = -1
     dataloader = None
+    log_interval = max(1, steps // 10)  # Log every ~10% of training
     
     while step < steps:
         # Calculate current quarter and dropout rate
@@ -402,12 +403,14 @@ def train_stage1_router(model, tagged_data, tokenizer, config, telemetry_logger)
             'grad_norm': grad_norm
         })
         
-        if (step + 1) % 10 == 0 and dropout_rate < 1.0:
-            log_routing_alignment(
-                model, batch, tokenizer,
-                step + 1, 'stage1_router_pretrain',
-                dropout_rate, telemetry_logger
-            )
+        # Log routing alignment at intervals (2-4 samples per checkpoint)
+        if (step + 1) % log_interval == 0 and dropout_rate < 1.0:
+            for sample_idx in range(3):  # 3 samples per checkpoint
+                log_routing_alignment(
+                    model, batch, tokenizer,
+                    step + 1, 'stage1_router_pretrain',
+                    dropout_rate, telemetry_logger
+                )
         step += 1
         pbar.update(1)
     
