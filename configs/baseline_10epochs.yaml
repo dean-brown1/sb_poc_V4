@@ -1,0 +1,46 @@
+# Baseline Configuration: Adapters-only (no SchemaBank)
+
+experiment:
+  name: "baseline_adapters"
+  seed: 42
+  mode: "baseline"
+  output_dir: "./results/baseline_10epochs"
+
+model:
+  base_model: "Qwen/Qwen2-0.5B"
+  torch_dtype: "bfloat16"
+  device_map: "auto"
+
+lora:
+  r: 8
+  lora_alpha: 16
+  lora_dropout: 0.05
+  target_modules: ["q_proj", "v_proj", "k_proj", "o_proj"]
+  bias: "none"
+  task_type: "CAUSAL_LM"
+
+training:
+  total_steps: 18680
+  batch_size: 1
+  gradient_accumulation_steps: 4
+  seq_len: 4096
+  learning_rate: 0.0001
+  weight_decay: 0.01
+  warmup_ratio: 0.05
+  max_grad_norm: 1.0
+
+dataset:
+  name: "gsm8k"
+  split_train: "train"
+  split_test: "test"
+  num_train_samples: null  # Use all
+  
+evaluation:
+  eval_interval: 50
+  num_test_samples: 500
+  max_new_tokens: 200
+  do_sample: false
+  
+logging:
+  log_every_n_steps: 1
+  save_final_only: true
