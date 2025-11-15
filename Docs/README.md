@@ -1,286 +1,295 @@
 # SchemaBank POC V4
 
-**Lab-quality reproducible implementation of SchemaBank for GSM8K mathematical reasoning**
+# SchemaBank: Sparse Routing as Training Curriculum
+
+**Parameter-efficient fine-tuning through structured routing-based training**
 
 ## Overview
 
-SchemaBank is a sparse mixture-of-experts architecture that uses learned routing to direct tokens through specialized low-rank transformation schemas. This implementation demonstrates a **2.2x improvement** in GSM8K accuracy (11.8% vs 5.4% baseline) using three-stage training with tag curriculum.
+SchemaBank demonstrates that sparse routing mechanisms, when used as a **training curriculum** rather than an inference tool, dramatically improve LoRA adapter learning. Training with routing then removing it at inference achieves **3.4x better accuracy** than baseline LoRA on GSM8K mathematical reasoning.
 
-### Key Results
+### Key Results (10 Epochs, 4 Seeds)
 
-| Method | Accuracy | Schema Reuse | PPL_512 | PPL_4096 |
-|--------|----------|--------------|---------|----------|
-| Baseline (LoRA only) | 5.4% | 0.0 | 100.2 | 100.2 |
-| SchemaBank (S=32, r=16) | **11.8%** | **1.71** | 4,886 | 4,967 |
+| Method | Mean Accuracy | Std Dev | Improvement |
+|--------|---------------|---------|-------------|
+| **Baseline** (LoRA only) | 3.05% | ±1.30% | - |
+| **SchemaBank** (trained with routing) | **10.35%** | ±0.55% | **+239%** |
 
-## Critical Fixes from V3
+**Critical Finding:** SchemaBank provides both higher performance AND 2.4x better stability.
 
-### 1. Evaluation Bug (FIXED)
-**Problem:** Training-time evaluation always returned 0.0% accuracy
-**Cause:** `total` variable never incremented in `eval_gsm8k_accuracy`
-**Fix:** Added `total += 1` line (see `src/evaluation.py:75`)
+## Architecture
 
-### 2. Three-Stage Training (Proven)
-- **Stage 1 (250 steps)**: Router pre-training with tag curriculum
-- **Stage 2 (500 steps)**: Schema transformation learning
-- **Stage 3 (250 steps)**: Joint fine-tuning
-
-### 3. Configuration Management
-- All hyperparameters in YAML config files
-- No hardcoded values in training code
-- Full experiment reproducibility
-
-## Project Structure
+SchemaBank attaches sparse routing modules to the last 2 transformer layers during training:
 
 ```
-sb_poc_v4/
-├── configs/
-│   ├── baseline.yaml          # Baseline (LoRA only) configuration
-│   └── schemabank.yaml        # SchemaBank 3-stage configuration
-├── src/
-│   ├── model.py               # SchemaBank architecture
-│   ├── evaluation.py          # Evaluation functions (FIXED)
-│   ├── training.py            # Training loops (TODO: Phase 2)
-│   ├── data.py                # Data preparation (TODO: Phase 2)
-│   └── utils.py               # Config, logging, telemetry
-├── train.py                   # Main training script (TODO: Phase 2)
-├── evaluate.py                # Standalone evaluation (TODO: Phase 2)
-├── requirements.txt           # Locked dependencies
-└── README.md                  # This file
+Input → Transformer Layers → [Last-2 layers with SchemaBank] → Output
+                                    ↓
+                              Router (H→S logits)
+                                    ↓
+                              Top-k selection (k=2)
+                                    ↓
+                          Low-rank transforms (U, V)
+                                    ↓
+                              Gated mixing → Output
 ```
+
+**Key Properties:**
+- **S=32 schemas**: Specialized transformation pathways
+- **Rank r=16**: Low-rank bottleneck per schema
+- **Top-k=2**: Sparse activation (2 schemas per token)
+- **Removed at inference**: Only LoRA adapters used for predictions
+
+## Three-Stage Training Curriculum
+
+### Stage 1: Router Pre-training (25% of steps)
+- **Train**: Router weights only
+- **Frozen**: Base model + LoRA + Schema transforms
+- **Tag Curriculum**: Progressive dropout (0% → 25% → 50% → 75%)
+- **Goal**: Learn task-appropriate routing patterns
+
+### Stage 2: Schema Training (50% of steps)
+- **Train**: Schema transforms (U, V) + LoRA adapters
+- **Frozen**: Base model + Router
+- **No tags**: Pure outcome-based learning
+- **Goal**: Schemas learn specialized transformations
+
+### Stage 3: Joint Fine-tuning (25% of steps)
+- **Train**: Router + Schemas + LoRA
+- **Frozen**: Base model only
+- **No tags**: End-to-end optimization
+- **Goal**: Refine coordination between components
+
+**At inference:** Router and schemas are removed. Only LoRA adapters remain.
 
 ## Installation
 
 ```bash
+# Clone repository
+git clone https://github.com/yourusername/schemabank
+cd schemabank
+
 # Create virtual environment
 python -m venv venv
-source venv/bin/activate  # or: venv\Scripts\activate on Windows
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
+```
 
-# Verify installation
-python -c "import torch; print(f'PyTorch {torch.__version__}')"
+**Requirements:**
+- Python 3.10+
+- PyTorch 2.8.0
+- Transformers 4.56.1
+- CUDA-capable GPU (tested on RTX 5000 Ada, 32GB VRAM)
+
+## Quick Start
+
+### Train Baseline (LoRA only)
+
+```bash
+python train.py --config configs/baseline_10epochs.yaml
+```
+
+**Expected:** ~3% accuracy, ~12 minutes training
+
+### Train SchemaBank
+
+```bash
+python train.py --config configs/schemabank_10epochs.yaml
+```
+
+**Expected:** ~10% accuracy, ~12 minutes training
+
+### Evaluate Checkpoint
+
+```bash
+python evaluate.py --checkpoint results/schemabank_10epochs/checkpoint --num_samples 500
 ```
 
 ## Configuration
 
-### Baseline Configuration (`configs/baseline.yaml`)
-
-Simple LoRA adapter training for comparison:
+### Baseline Configuration
 
 ```yaml
 experiment:
-  name: "baseline_adapters"
+  name: "baseline_10epochs"
   seed: 42
   mode: "baseline"
 
 model:
   base_model: "Qwen/Qwen2-0.5B"
+  torch_dtype: "bfloat16"
 
 lora:
   r: 8
   lora_alpha: 16
-  
+  target_modules: ["q_proj", "v_proj", "k_proj", "o_proj"]
+
 training:
-  total_steps: 1000
+  total_steps: 18680  # 10 epochs
   batch_size: 1
   learning_rate: 1.0e-4
 ```
 
-### SchemaBank Configuration (`configs/schemabank.yaml`)
-
-Three-stage training with tag curriculum:
+### SchemaBank Configuration
 
 ```yaml
-experiment:
-  name: "schemabank_gsm8k"
-  seed: 42
-  mode: "schemabank"
-
 schemabank:
   num_schemas: 32
   rank: 16
   topk: 2
-  
+  layers: "last_2"
+
 training:
-  total_steps: 1000
+  total_steps: 18680
   
   stages:
     stage1_router_pretrain:
-      steps: 250
+      steps: 4670  # 25%
       tag_curriculum:
-        dropout_schedule: [0.0, 0.75, 0.50, 0.25]
+        dropout_schedule: [0.0, 0.25, 0.5, 0.75]
+      
     stage2_schema_train:
-      steps: 500
+      steps: 9340  # 50%
+      
     stage3_joint_finetune:
-      steps: 250
+      steps: 4670  # 25%
 ```
 
-## Usage
+## Project Structure
 
-### Training
-
-Train baseline model:
-```bash
-python train.py --config configs/baseline.yaml
+```
+schemabank/
+├── configs/
+│   ├── baseline_10epochs.yaml
+│   └── schemabank_10epochs.yaml
+├── src/
+│   ├── data.py           # Dataset loading, schema tagging
+│   ├── training.py       # Three-stage training logic
+│   ├── model.py          # SchemaBank architecture
+│   ├── evaluation.py     # GSM8K accuracy, perplexity
+│   └── utils.py          # Config, logging, telemetry
+├── train.py              # Main training entry point
+├── evaluate.py           # Standalone evaluation
+└── requirements.txt
 ```
 
-Train SchemaBank model:
-```bash
-python train.py --config configs/schemabank.yaml
-```
+## Detailed Results
 
-### Evaluation
+### Accuracy by Seed (10 Epochs)
 
-Evaluate a trained checkpoint:
-```bash
-python evaluate.py --checkpoint results/schemabank_seed42/checkpoint
-```
+**SchemaBank:**
+- Seed 42: 10.0%
+- Seed 123: 10.0%
+- Seed 456: 10.2%
+- Seed 789: 11.2%
+- **Mean: 10.35% ± 0.55%**
 
-Evaluate with custom output path:
-```bash
-python evaluate.py --checkpoint results/baseline_seed42/checkpoint --output my_eval.json
-```
+**Baseline:**
+- Seed 42: 2.4%
+- Seed 123: 5.0%
+- Seed 456: 2.4%
+- Seed 789: 2.4%
+- **Mean: 3.05% ± 1.30%**
 
-### Expected Output Structure
+### Key Findings
 
-After training, results directory contains:
-```
-results/schemabank_seed42/
-├── config.yaml              # Configuration used
-├── results.json             # Complete results
-├── training_log.jsonl       # Per-step training metrics
-└── checkpoint/              # Model weights
-    ├── pytorch_model.bin
-    ├── config.json
-    ├── schemabank_adapters.pt      # SchemaBank weights (if applicable)
-    └── schemabank_config.json      # SchemaBank config (if applicable)
-```
+1. **3.4x Performance Improvement**: SchemaBank achieves 10.35% vs baseline's 3.05%
+2. **2.4x Better Stability**: SchemaBank has ±0.55% variance vs baseline's ±1.30%
+3. **Curriculum Matters**: Training with routing provides structured learning signal
+4. **Inference Simplicity**: Removing routing at inference avoids overhead while keeping benefits
 
-## Telemetry
+### Training Dynamics
 
-### Training Log (`training_log.jsonl`)
-Per-step metrics in JSONL format for easy analysis:
+**Final Training Losses (10 Epochs):**
+- SchemaBank: ~1.52 (well converged)
+- Baseline: ~2.4-2.5 (less converged)
 
-```jsonl
-{"step": 1, "stage": "router_pretrain", "loss": 4.18, "ortho": 0.02, "lr": 0.0001}
-{"step": 2, "stage": "router_pretrain", "loss": 4.69, "ortho": 0.03, "lr": 0.0001}
-...
-```
+**Evaluation Timing:**
+- SchemaBank: Consistent 2.1-2.8s per question
+- Baseline: Erratic 1-3s per question (less stable outputs)
 
-### Final Results (`results.json`)
-Comprehensive evaluation including:
-- GSM8K accuracy (with sample predictions)
-- Perplexity (512 and 4096 token contexts)
-- Schema reuse consistency
-- Schema usage distribution
-- Routing pattern analysis
+## Why SchemaBank Works
 
-## Architecture Details
+### Hypothesis: Training Curriculum Effect
 
-### SchemaBank Module
+The routing mechanism during training provides:
 
+1. **Structured Exploration**: Router forces model to consider multiple specialized pathways
+2. **Ensemble Learning**: Schemas create implicit ensemble during training
+3. **Better LoRA Initialization**: LoRA adapters learn from structured signal, not chaos
+4. **Compositional Reasoning**: Different schemas handle different reasoning patterns
+
+### Evidence
+
+- **Tag alignment during training**: Router learns task structure (captured in routing telemetry)
+- **Schema specialization**: Different schemas activate for different problem types
+- **Transfer to LoRA**: Benefits persist even after removing routing
+- **Stability improvement**: Reduced variance suggests better optimization landscape
+
+## Reproducibility
+
+### Verified Configurations
+- **Model**: Qwen/Qwen2-0.5B (base model, not instruction-tuned)
+- **Training**: 10 epochs = 18,680 steps (batch_size=1, grad_accum=4)
+- **Seeds**: 42, 123, 456, 789 (all tested)
+- **Hardware**: RTX 5000 Ada (32GB VRAM)
+
+### Random Seed Control
 ```python
-class SchemaBank(nn.Module):
-    """
-    Sparse routing with low-rank transformations
-    
-    - Router: H → S logits, top-k selection
-    - U, V: Low-rank transforms (S × H × r, S × r × H)
-    - Attributes: Schema-specific gating (S × ad)
-    """
+random.seed(seed)
+np.random.seed(seed)
+torch.manual_seed(seed)
+torch.cuda.manual_seed_all(seed)
+torch.backends.cudnn.deterministic = True
 ```
 
-**Key features:**
-- Top-k sparse routing (typically k=2)
-- Low-rank transformations (r=16)
-- Orthonormality regularization
-- No entropy regularization (proven unnecessary)
+### Results Package
+Each training run produces:
+```
+results/schemabank_10epochs_seed42/
+├── config.yaml              # Exact configuration used
+├── training_log.jsonl       # Per-step metrics
+├── results.json             # Final evaluation results
+└── checkpoint/
+    ├── adapter_config.json
+    ├── adapter_model.safetensors
+    ├── schemabank_adapters.pt      # SchemaBank weights
+    └── schemabank_config.json
+```
 
-### Three-Stage Training
-
-**Stage 1: Router Pre-training**
-- Train router weights only
-- Tag curriculum: Progressive tag dropout (0% → 75%)
-- Learns schema→problem mapping
-
-**Stage 2: Schema Training**
-- Train schema transforms + LoRA
-- Router frozen
-- Schemas learn specialized transformations
-
-**Stage 3: Joint Fine-tuning**
-- Train router + schemas + LoRA
-- Base model frozen
-- End-to-end optimization
-
-## Reproduction Checklist
-
-✅ **Phase 1 Complete** (Critical Fixes)
-- [x] Fixed evaluation bug
-- [x] Created config files
-- [x] Documented architecture
-- [x] Locked dependencies
-
-✅ **Phase 2 Complete** (Reorganization)
-- [x] Extract training code into `src/training.py`
-- [x] Extract data preparation into `src/data.py`
-- [x] Create main `train.py` entry point
-- [x] Create standalone `evaluate.py`
-- [x] Add comprehensive telemetry
-
-⏳ **Phase 3** (Documentation)
-- [ ] Add docstrings to all functions
-- [ ] Document three-stage training rationale
-- [ ] Add reproduction verification script
-- [ ] Create schema analysis notebooks
-
-⏳ **Phase 4** (Validation)
-- [ ] Run baseline experiment (seed 42)
-- [ ] Run SchemaBank experiment (seed 42)
-- [ ] Verify 11.8% vs 5.4% results
-- [ ] Generate publication plots
-
-## Verified Results (from V3)
-
-### GSM8K Accuracy
-- **Baseline**: 27/500 correct (5.4%)
-- **SchemaBank**: 59/500 correct (11.8%)
-- **Improvement**: 2.2x
-
-### Schema Usage
-- **Active schemas**: 23/32 (28% dead)
-- **Top schema (26)**: 35.3% usage (arithmetic core)
-- **Second schema (18)**: 14.5% usage (multi-step reasoning)
-- **Entropy**: 3.34/5.0 (66.7% - healthy diversity)
-
-### Perplexity
-Note: High perplexity (4,886) vs baseline (100) is expected. SchemaBank specializes for reasoning tasks, trading general sequence prediction for improved accuracy on mathematical problems.
-
-## Citations
-
-If using this code, please cite:
+## Citation
 
 ```bibtex
-@software{schemabank_v4_2025,
-  title={SchemaBank: Sparse Routing for Mathematical Reasoning},
+@software{schemabank2025,
+  title={SchemaBank: Sparse Routing as Training Curriculum for Parameter-Efficient Fine-Tuning},
   author={[Your Name]},
   year={2025},
-  url={https://github.com/[your-repo]/sb_poc_v4}
+  url={https://github.com/yourusername/schemabank}
 }
 ```
+
+## Future Work
+
+- [ ] Scale to 1B-2B models
+- [ ] Test on additional reasoning tasks (MATH, ARC)
+- [ ] Ablation studies (stage ratios, curriculum variations)
+- [ ] Mechanistic analysis (what do schemas learn?)
+- [ ] Compare to other curriculum methods
+
+## Acknowledgments
+
+Built on:
+- **Qwen2** (Alibaba): Base model
+- **LoRA** (Hu et al.): Parameter-efficient fine-tuning
+- **GSM8K** (Cobbe et al.): Evaluation dataset
 
 ## License
 
 [To be determined]
 
-## Contact
-
-[Your contact information]
-
 ---
 
-**Version**: 4.0 (Phase 2 - Reorganization Complete)  
-**Date**: 2025-11-10  
-**Status**: Ready for Phase 3 (Documentation) & Phase 4 (Validation)
+**Version**: 4.0 (10-Epoch Validated)  
+**Date**: November 2025  
+**Status**: Research code - validated results with 4 seeds
