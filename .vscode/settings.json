@@ -4,6 +4,7 @@
         "dtype",
         "finetune",
         "humaneval",
+        "passk",
         "pretrain",
         "Qwen",
         "schemabank",
