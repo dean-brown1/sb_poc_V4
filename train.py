@@ -81,29 +81,30 @@ def main():
     print("PHASE 2: Data Preparation")
     print("="*70)
     
-# Check which dataset to use
-    dataset_name = config['dataset'].get('name', 'gsm8k')  # Default to gsm8k for backward compatibility
+    # Check which dataset to use
+    dataset_name = config['dataset'].get('name', 'gsm8k')
 
-    if dataset_name == 'humaneval':
-        from src.data_humaneval import load_humaneval_data, prepare_humaneval_dataset
+    if dataset_name == 'mbpp':
+        from src.data_code import load_code_data, prepare_code_dataset
         
-        print("Loading HumanEval dataset...")
-        raw_data = load_humaneval_data("test")
+        print("Loading MBPP dataset...")
+        split = config['dataset'].get('split_train', 'train')
+        raw_data = load_code_data('mbpp', split)
         print(f"✓ Loaded {len(raw_data)} problems")
         
         if exp_config['mode'] == 'schemabank':
             tagging_method = config['dataset'].get('tagging_method', 'hash')
             num_schemas = config['schemabank']['num_schemas']
-            print(f"Preparing data with schema tags (method: {tagging_method})...")
-            tagged_data = prepare_humaneval_dataset(
+            print(f"Preparing data with schema tags...")
+            tagged_data = prepare_code_dataset(
                 raw_data,
+                'mbpp',
                 num_schemas=num_schemas,
                 tagging_method=tagging_method
             )
         else:
             print("Preparing data for baseline training...")
-            tagged_data = prepare_humaneval_dataset(raw_data, num_schemas=32, tagging_method='hash')
-        
+            tagged_data = prepare_code_dataset(raw_data, 'mbpp', num_schemas=32, tagging_method='hash')        
         print(f"✓ Prepared {len(tagged_data)} training examples")
 
     else:  # gsm8k (existing code)

@@ -13,11 +13,6 @@ import random
 import torch
 from datasets import Dataset, load_dataset
 from torch.utils.data import DataLoader
-from .data_humaneval import (
-    load_humaneval_data,
-    prepare_humaneval_dataset,
-    create_humaneval_dataloader
-)
 
 # ========== Schema Tagging ==========
 
@@ -271,18 +266,18 @@ def create_dataloader(tagged_data, tokenizer, max_len, batch_size,
     """
     Create DataLoader for training
     
-    Automatically detects dataset type (GSM8K or HumanEval) and uses
-    appropriate data packing function.
+    Automatically detects dataset type and uses appropriate data packing.
     """
-    # Debug: check what we got
     if not tagged_data:
         raise ValueError("tagged_data is empty")
     
-    first_item = tagged_data[0]    
-    # Detect dataset type
-    if 'prompt' in first_item and 'solution' in first_item:
-        # HumanEval format
-        return create_humaneval_dataloader(
+    first_item = tagged_data[0]
+    
+    # Detect dataset type by checking keys
+    if 'problem' in first_item and 'solution' in first_item:
+        # MBPP format (from data_code.py)
+        from src.data_code import create_code_dataloader
+        return create_code_dataloader(
             tagged_data,
             tokenizer,
             max_len=max_len,
@@ -298,7 +293,6 @@ def create_dataloader(tagged_data, tokenizer, max_len, batch_size,
     
     # GSM8K path
     ds = Dataset.from_dict({"input_ids": ids})
-    
     pad_token_id = tokenizer.pad_token_id
     dl = DataLoader(
         ds, 
@@ -308,7 +302,6 @@ def create_dataloader(tagged_data, tokenizer, max_len, batch_size,
     )
     
     return dl
-
 
 # ========== Synthetic Data (for schema reuse testing) ==========
 
