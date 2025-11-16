@@ -13,7 +13,11 @@ import random
 import torch
 from datasets import Dataset, load_dataset
 from torch.utils.data import DataLoader
-
+from .data_humaneval import (
+    load_humaneval_data,
+    prepare_humaneval_dataset,
+    create_humaneval_dataloader
+)
 
 # ========== Schema Tagging ==========
 

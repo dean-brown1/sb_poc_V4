@@ -3,6 +3,7 @@
         "bfloat",
         "dtype",
         "finetune",
+        "humaneval",
         "pretrain",
         "Qwen",
         "schemabank",

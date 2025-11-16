@@ -87,34 +87,60 @@ def main():
     print("PHASE 2: Data Preparation")
     print("="*70)
     
-    # Load and prepare data
-    print("Loading GSM8K dataset...")
-    gsm8k_train = load_gsm8k_data("train")
-    gsm8k_test = load_gsm8k_data("test")
-    print(f"✓ Loaded {len(gsm8k_train)} training examples")
-    print(f"✓ Loaded {len(gsm8k_test)} test examples")
-    
-    # Prepare tagged data (for SchemaBank) or regular data (for baseline)
-    if exp_config['mode'] == 'schemabank':
-        tagging_method = config['dataset'].get('tagging_method', 'hash')
-        num_schemas = config['schemabank']['num_schemas']
-        print(f"Preparing data with schema tags (method: {tagging_method})...")
-        tagged_data = prepare_gsm8k_dataset(
-            gsm8k_train,
-            num_schemas=num_schemas,
-            tagging_method=tagging_method
-        )
-    else:
-        # For baseline, still use the same structure but tags won't be used
-        print("Preparing data for baseline training...")
-        tagged_data = prepare_gsm8k_dataset(gsm8k_train, num_schemas=32, tagging_method='hash')
-    
-    print(f"✓ Prepared {len(tagged_data)} training examples")
+# Check which dataset to use
+    dataset_name = config['dataset'].get('name', 'gsm8k')  # Default to gsm8k for backward compatibility
+
+    if dataset_name == 'humaneval':
+        from src.data_humaneval import load_humaneval_data, prepare_humaneval_dataset
+        
+        print("Loading HumanEval dataset...")
+        raw_data = load_humaneval_data("test")
+        print(f"✓ Loaded {len(raw_data)} problems")
+        
+        if exp_config['mode'] == 'schemabank':
+            tagging_method = config['dataset'].get('tagging_method', 'hash')
+            num_schemas = config['schemabank']['num_schemas']
+            print(f"Preparing data with schema tags (method: {tagging_method})...")
+            tagged_data = prepare_humaneval_dataset(
+                raw_data,
+                num_schemas=num_schemas,
+                tagging_method=tagging_method
+            )
+        else:
+            print("Preparing data for baseline training...")
+            tagged_data = prepare_humaneval_dataset(raw_data, num_schemas=32, tagging_method='hash')
+        
+        print(f"✓ Prepared {len(tagged_data)} training examples")
+
+    else:  # gsm8k (existing code)
+        print("Loading GSM8K dataset...")
+        gsm8k_train = load_gsm8k_data("train")
+        gsm8k_test = load_gsm8k_data("test")
+        print(f"✓ Loaded {len(gsm8k_train)} training examples")
+        print(f"✓ Loaded {len(gsm8k_test)} test examples")
+        
+        # Prepare tagged data (for SchemaBank) or regular data (for baseline)
+        if exp_config['mode'] == 'schemabank':
+            tagging_method = config['dataset'].get('tagging_method', 'hash')
+            num_schemas = config['schemabank']['num_schemas']
+            print(f"Preparing data with schema tags (method: {tagging_method})...")
+            tagged_data = prepare_gsm8k_dataset(
+                gsm8k_train,
+                num_schemas=num_schemas,
+                tagging_method=tagging_method
+            )
+        else:
+            # For baseline, still use the same structure but tags won't be used
+            print("Preparing data for baseline training...")
+            tagged_data = prepare_gsm8k_dataset(gsm8k_train, num_schemas=32, tagging_method='hash')
+        
+        print(f"✓ Prepared {len(tagged_data)} training examples")
     
     print("\n" + "="*70)
     print("PHASE 3: Training")
     print("="*70)
     
+        
     # Train model
     if exp_config['mode'] == 'baseline':
         model = train_baseline(model, tagged_data, tokenizer, config, telemetry_logger)

@@ -1,0 +1,39 @@
+dataset:
+  name: humaneval
+  tagging_method: hash
+evaluation:
+  num_test_samples: 164
+experiment:
+  mode: schemabank
+  name: schemabank_humaneval
+  output_dir: ./results/baseline_humaneval_6epochs_seed42
+  seed: 42
+lora:
+  bias: none
+  lora_alpha: 16
+  lora_dropout: 0.05
+  r: 16
+  target_modules:
+  - q_proj
+  - k_proj
+  - v_proj
+  - o_proj
+  task_type: CAUSAL_LM
+model:
+  base_model: Qwen/Qwen2-0.5B
+  torch_dtype: bfloat16
+training:
+  batch_size: 1
+  learning_rate: 0.0001
+  max_grad_norm: 1.0
+  seq_len: 1024
+  stages:
+    stage1_router_pretrain:
+      steps: 0
+    stage2_schema_train:
+      steps: 0
+    stage3_joint_finetune:
+      steps: 0
+  total_steps: 984
+  warmup_ratio: 0.05
+  weight_decay: 0.01
