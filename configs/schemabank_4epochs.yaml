@@ -1,3 +1,5 @@
+# /configs/schemabank_4epochs.yaml
+
 experiment:
   name: "schemabank_4epochs_v2"
   seed: 42

@@ -1,39 +1,41 @@
-dataset:
-  name: humaneval
-  tagging_method: hash
-evaluation:
-  num_test_samples: 164
 experiment:
-  mode: schemabank
-  name: schemabank_humaneval
-  output_dir: ./results/baseline_humaneval_4epochs_seed42
+  name: "baseline_humaneval_4epochs"
   seed: 42
+  mode: "baseline"
+  output_dir: "./results/baseline_humaneval_4epochs_seed42"
+
+model:
+  base_model: "Qwen/Qwen2-0.5B"
+  torch_dtype: "bfloat16"
+  device_map: "auto"
+
 lora:
-  bias: none
+  r: 16
   lora_alpha: 16
   lora_dropout: 0.05
-  r: 16
-  target_modules:
-  - q_proj
-  - k_proj
-  - v_proj
-  - o_proj
-  task_type: CAUSAL_LM
-model:
-  base_model: Qwen/Qwen2-0.5B
-  torch_dtype: bfloat16
+  target_modules: ["q_proj", "v_proj", "k_proj", "o_proj"]
+  bias: "none"
+  task_type: "CAUSAL_LM"
+
 training:
-  batch_size: 1
-  learning_rate: 0.0001
-  max_grad_norm: 1.0
-  seq_len: 1024
-  stages:
-    stage1_router_pretrain:
-      steps: 0
-    stage2_schema_train:
-      steps: 0
-    stage3_joint_finetune:
-      steps: 0
   total_steps: 656
-  warmup_ratio: 0.05
+  batch_size: 1
+  gradient_accumulation_steps: 1
+  seq_len: 1024
+  learning_rate: 0.0001
   weight_decay: 0.01
+  warmup_ratio: 0.05
+  max_grad_norm: 1.0
+
+dataset:
+  name: "humaneval"
+  tagging_method: "hash"
+  
+evaluation:
+  num_test_samples: 164
+  max_new_tokens: 512
+  do_sample: false
+  
+logging:
+  log_every_n_steps: 10
+  save_final_only: true

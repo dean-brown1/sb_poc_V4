@@ -1,47 +1,74 @@
-dataset:
-  name: humaneval
-  tagging_method: hash
-evaluation:
-  num_test_samples: 164
 experiment:
-  mode: schemabank
-  name: schemabank_humaneval
-  output_dir: ./results/schemabank_humaneval_6epochs_seed42
+  name: "schemabank_humaneval_6epochs"
   seed: 42
+  mode: "schemabank"
+  output_dir: "./results/schemabank_humaneval_6epochs_seed42"
+
+model:
+  base_model: "Qwen/Qwen2-0.5B"
+  torch_dtype: "bfloat16"
+  device_map: "auto"
+
 lora:
-  bias: none
+  r: 16
   lora_alpha: 16
   lora_dropout: 0.05
-  r: 16
-  target_modules:
-  - q_proj
-  - k_proj
-  - v_proj
-  - o_proj
-  task_type: CAUSAL_LM
-model:
-  base_model: Qwen/Qwen2-0.5B
-  torch_dtype: bfloat16
+  target_modules: ["q_proj", "v_proj", "k_proj", "o_proj"]
+  bias: "none"
+  task_type: "CAUSAL_LM"
+
 schemabank:
-  attr_dim: 32
   num_schemas: 32
   rank: 16
-  regularization:
-    entropy_weight: 0.0
-    ortho_weight: 0.01
   topk: 2
+  attr_dim: 32
+  layers: "last_2"
+  regularization:
+    ortho_weight: 0.01
+    entropy_weight: 0.0
+
 training:
+  total_steps: 984
   batch_size: 1
-  learning_rate: 0.0001
-  max_grad_norm: 1.0
+  gradient_accumulation_steps: 1
   seq_len: 1024
+  learning_rate: 0.0001
+  weight_decay: 0.01
+  warmup_ratio: 0.05
+  max_grad_norm: 1.0
+  
   stages:
     stage1_router_pretrain:
       steps: 295
+      description: "Router learns schema mapping"
+      frozen: ["base_model", "lora_adapters", "schema_transforms"]
+      trainable: ["router_weights"]
+      tag_curriculum:
+        dropout_schedule: [0.0, 0.25, 0.5, 0.75]
+        
     stage2_schema_train:
-      steps: 295
-    stage3_joint_finetune:
       steps: 394
-  total_steps: 984
-  warmup_ratio: 0.05
-  weight_decay: 0.01
+      description: "Schemas learn transformations"
+      frozen: ["base_model", "router_weights"]
+      trainable: ["schema_transforms", "lora_adapters"]
+      use_tags: false
+      
+    stage3_joint_finetune:
+      steps: 295
+      description: "Joint optimization"
+      frozen: ["base_model"]
+      trainable: ["router_weights", "schema_transforms", "lora_adapters"]
+      use_tags: false
+
+dataset:
+  name: "humaneval"
+  tagging_method: "hash"
+  
+evaluation:
+  num_test_samples: 164
+  max_new_tokens: 512
+  do_sample: false
+  
+logging:
+  log_every_n_steps: 10
+  save_final_only: true

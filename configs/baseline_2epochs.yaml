@@ -1,4 +1,4 @@
-# Baseline Configuration: Adapters-only (no SchemaBank)
+# /configs/baseline_2epochs.yaml
 
 experiment:
   name: "baseline_adapters"
