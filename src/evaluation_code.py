@@ -27,7 +27,7 @@ def eval_code_passk(
         model: Model to evaluate
         tokenizer: Tokenizer
         dataset: Code dataset (tagged or raw)
-        dataset_name: 'mbpp'
+        dataset_name: 'code_contests'
         device: Device
         k: k for pass@k
         temperature: Sampling temperature
@@ -119,8 +119,8 @@ def run_code_tests(code, tests, dataset_name):
         exec(code, exec_globals)
         
         # Run tests based on dataset format
-        if dataset_name == "mbpp":
-            # MBPP: test_list is a list of assertion strings
+        if dataset_name == "code_contests":
+            # CodeContests: tests is a list of assertion strings
             for test in tests:
                 exec(test, exec_globals)
         

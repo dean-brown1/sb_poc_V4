@@ -7,7 +7,7 @@ Code Evaluation Script
 Standalone evaluation for trained code generation models.
 
 Usage:
-    python evaluate_code.py --checkpoint results/baseline_mbpp_2epochs_seed42/checkpoint --dataset mbpp
+    python evaluate_code.py --checkpoint results/baseline_XXXX_2epochs_seed42/checkpoint --dataset XXXX
 """
 
 import argparse
@@ -41,7 +41,7 @@ def load_checkpoint(checkpoint_path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--checkpoint", required=True, help="Path to checkpoint")
-    parser.add_argument("--dataset", default="mbpp", choices=["mbpp"], help="Dataset to evaluate on")
+    parser.add_argument("--dataset", default="code_contests", choices=["code_contests"], help="Dataset to evaluate on")
     parser.add_argument("--split", default="test", help="Dataset split (test, validation, etc.)")
     parser.add_argument("--output", default=None, help="Output file (default: checkpoint_dir/evaluation.json)")
     args = parser.parse_args()

@@ -1,0 +1,46 @@
+# configs/baseline_code_contests_10epochs.yaml
+
+experiment:
+  name: "baseline_code_contests_10epochs"
+  seed: 42
+  mode: "baseline"
+  output_dir: "./results/baseline_code_contests_10epochs"
+
+model:
+  base_model: "Qwen/Qwen2-0.5B"
+  torch_dtype: "bfloat16"
+  device_map: "auto"
+
+lora:
+  r: 8
+  lora_alpha: 16
+  lora_dropout: 0.05
+  target_modules: ["q_proj", "v_proj", "k_proj", "o_proj"]
+  bias: "none"
+  task_type: "CAUSAL_LM"
+
+training:
+  total_steps: 15000  # 2000 examples * 30 epochs / 4 grad_accum = 15000 steps
+  batch_size: 1
+  gradient_accumulation_steps: 4
+  seq_len: 1024
+  learning_rate: 0.0001
+  weight_decay: 0.01
+  warmup_ratio: 0.05
+  max_grad_norm: 1.0
+
+dataset:
+  name: "code_contests"
+  split_train: "train"
+  split_test: "test"
+  num_train_samples: 2000
+  
+evaluation:
+  eval_interval: 100
+  num_test_samples: 50
+  max_new_tokens: 512
+  do_sample: false
+  
+logging:
+  log_every_n_steps: 1
+  save_final_only: true

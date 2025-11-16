@@ -84,12 +84,13 @@ def main():
     # Check which dataset to use
     dataset_name = config['dataset'].get('name', 'gsm8k')
 
-    if dataset_name == 'mbpp':
+    if dataset_name in ['code_contests']:
         from src.data_code import load_code_data, prepare_code_dataset
         
-        print("Loading MBPP dataset...")
+        print(f"Loading {dataset_name.upper()} dataset...")
         split = config['dataset'].get('split_train', 'train')
-        raw_data = load_code_data('mbpp', split)
+        subsample = config['dataset'].get('num_train_samples', None)
+        raw_data = load_code_data(dataset_name, split, subsample=subsample)
         print(f"✓ Loaded {len(raw_data)} problems")
         
         if exp_config['mode'] == 'schemabank':
@@ -98,13 +99,18 @@ def main():
             print(f"Preparing data with schema tags...")
             tagged_data = prepare_code_dataset(
                 raw_data,
-                'mbpp',
+                dataset_name,
                 num_schemas=num_schemas,
                 tagging_method=tagging_method
             )
         else:
             print("Preparing data for baseline training...")
-            tagged_data = prepare_code_dataset(raw_data, 'mbpp', num_schemas=32, tagging_method='hash')        
+            tagged_data = prepare_code_dataset(
+                raw_data, 
+                dataset_name, 
+                num_schemas=32, 
+                tagging_method='hash'
+            )        
         print(f"✓ Prepared {len(tagged_data)} training examples")
 
     else:  # gsm8k (existing code)

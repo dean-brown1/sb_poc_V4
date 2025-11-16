@@ -3,7 +3,7 @@
 """
 Code Dataset Handler
 
-Unified handler for code generation datasets (MBPP etc.)
+Unified handler for code generation datasets (CodeContests)
 Config-driven to avoid duplication.
 """
 
@@ -16,19 +16,25 @@ from torch.utils.data import Dataset, DataLoader
 import random
 
 
-def load_code_data(dataset_name, split="train"):
+def load_code_data(dataset_name, split="train", subsample=None):
     """
     Load code dataset from Hugging Face
     
     Args:
-        dataset_name: 'mbpp'
-        split: Dataset split ('train', 'test', etc.)
+        dataset_name: 'code_contests'
+        split: Dataset split ('train', 'test', 'validation')
+        subsample: Number of examples to subsample (None = use all)
         
     Returns:
         HuggingFace dataset
     """
-    if dataset_name == "mbpp":
-        dataset = load_dataset("mbpp", split=split)
+    if dataset_name == "code_contests":
+        dataset = load_dataset("deepmind/code_contests", split=split)
+        
+        # Subsample if requested
+        if subsample is not None and subsample < len(dataset):
+            dataset = dataset.shuffle(seed=42).select(range(subsample))
+            
     else:
         raise ValueError(f"Unknown dataset: {dataset_name}")
     
@@ -41,10 +47,41 @@ def get_field_names(dataset_name):
     
     Returns: (problem_field, solution_field, test_field)
     """
-    if dataset_name == "mbpp":
-        return "text", "code", "test_list"
+    if dataset_name == "code_contests":
+        return "description", "solutions", "public_tests"
     else:
         raise ValueError(f"Unknown dataset: {dataset_name}")
+
+
+def extract_solution_from_code_contests(solutions_dict):
+    """
+    Extract first Python3 solution from CodeContests format
+    
+    CodeContests stores solutions as {'language': [1,3,2...], 'solution': [...]}
+    where language codes are: 1=Python2, 3=Python3, 2=C++, 4=Java
+    
+    Args:
+        solutions_dict: Solutions dict from CodeContests
+        
+    Returns:
+        First Python3 solution string, or first Python2 solution if no Python3 found,
+        or None if no Python solutions
+    """
+    languages = solutions_dict.get('language', [])
+    solutions = solutions_dict.get('solution', [])
+    
+    # Try to find Python3 (language code 3) first
+    for lang, sol in zip(languages, solutions):
+        if lang == 3:  # Python3
+            return sol
+    
+    # Fall back to Python2 (language code 1)
+    for lang, sol in zip(languages, solutions):
+        if lang == 1:  # Python2
+            return sol
+    
+    # No Python solutions found
+    return None
 
 
 def extract_tag_key(problem_text, dataset_name):
@@ -58,8 +95,8 @@ def extract_tag_key(problem_text, dataset_name):
     Returns:
         String to use for hashing
     """
-    # Use first 50 chars as stable identifier
-    return problem_text[:50]
+    # Use first 100 chars as stable identifier
+    return problem_text[:100]
 
 
 def assign_schema_tags(
@@ -73,7 +110,7 @@ def assign_schema_tags(
     
     Args:
         dataset: Code dataset
-        dataset_name: 'mbpp'
+        dataset_name: 'code_contests'
         num_schemas: Number of schemas
         tagging_method: 'hash' or 'semantic'
         
@@ -84,8 +121,20 @@ def assign_schema_tags(
     
     tagged_examples = []
     
-    for example in dataset:
+    for idx, example in enumerate(dataset):
         problem_text = example[problem_field]
+        
+        # Extract solution based on dataset
+        if dataset_name == "code_contests":
+            solutions_dict = example[solution_field]
+            solution = extract_solution_from_code_contests(solutions_dict)
+            
+            # Skip if no Python solution available
+            if solution is None:
+                continue
+                
+            tests = example[test_field]  # public_tests dict
+            task_id = example.get('name', f'cc_{idx}')
         
         # Get tagging key
         tag_key = extract_tag_key(problem_text, dataset_name)
@@ -103,10 +152,10 @@ def assign_schema_tags(
             schema2 = 1
         
         tagged_example = {
-            'task_id': example.get('task_id', 'unknown'),
+            'task_id': task_id,
             'problem': problem_text,
-            'solution': example[solution_field],
-            'tests': example[test_field],
+            'solution': solution,
+            'tests': tests,
             'schema_tags': [schema1, schema2],
             'tag_key': tag_key
         }
@@ -127,7 +176,7 @@ def prepare_code_dataset(
     
     Args:
         dataset: Raw code dataset
-        dataset_name: 'mbpp'
+        dataset_name: 'code_contests'
         num_schemas: Number of schemas
         tagging_method: Tagging method
         
@@ -152,6 +201,8 @@ def prepare_code_dataset(
         print(f"  Task: {example['task_id']}")
         print(f"  Tag key: {example['tag_key']}")
         print(f"  Schemas: {example['schema_tags']}")
+        print(f"  Problem length: {len(example['problem'])} chars")
+        print(f"  Solution length: {len(example['solution'])} chars")
     
     return tagged_data
 
