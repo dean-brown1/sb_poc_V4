@@ -278,9 +278,7 @@ def create_dataloader(tagged_data, tokenizer, max_len, batch_size,
     if not tagged_data:
         raise ValueError("tagged_data is empty")
     
-    first_item = tagged_data[0]
-    print(f"DEBUG: First item keys = {first_item.keys()}")
-    
+    first_item = tagged_data[0]    
     # Detect dataset type
     if 'prompt' in first_item and 'solution' in first_item:
         # HumanEval format
