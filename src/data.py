@@ -271,18 +271,36 @@ def create_dataloader(tagged_data, tokenizer, max_len, batch_size,
     """
     Create DataLoader for training
     
-    Args:
-        tagged_data: Prepared dataset from prepare_gsm8k_dataset
-        tokenizer: Tokenizer
-        max_len: Max sequence length
-        batch_size: Batch size
-        tag_dropout_rate: Tag dropout rate for curriculum
-        shuffle: Whether to shuffle data
-        
-    Returns:
-        DataLoader
+    Automatically detects dataset type (GSM8K or HumanEval) and uses
+    appropriate data packing function.
     """
-    ids = pack_gsm8k_with_tags(tagged_data, tokenizer, max_len, tag_dropout_rate)
+    # Debug: check what we got
+    if not tagged_data:
+        raise ValueError("tagged_data is empty")
+    
+    first_item = tagged_data[0]
+    print(f"DEBUG: First item keys = {first_item.keys()}")
+    
+    # Detect dataset type
+    if 'prompt' in first_item and 'solution' in first_item:
+        # HumanEval format
+        print("DEBUG: Detected HumanEval format, using HumanEval dataloader")
+        return create_humaneval_dataloader(
+            tagged_data,
+            tokenizer,
+            max_len=max_len,
+            batch_size=batch_size,
+            tag_dropout_rate=tag_dropout_rate,
+            shuffle=shuffle
+        )
+    elif 'example' in first_item:
+        # GSM8K format
+        print("DEBUG: Detected GSM8K format, using GSM8K packing")
+        ids = pack_gsm8k_with_tags(tagged_data, tokenizer, max_len, tag_dropout_rate)
+    else:
+        raise ValueError(f"Unknown dataset format. Keys: {first_item.keys()}")
+    
+    # GSM8K path
     ds = Dataset.from_dict({"input_ids": ids})
     
     pad_token_id = tokenizer.pad_token_id
