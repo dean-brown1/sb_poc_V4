@@ -2,14 +2,9 @@
 *.backup
 *_backup.py
 
-# Test configs (keep only production ones)
-configs/*_quick.yaml
-configs/*_medium.yaml
-configs/*_moresteps.yaml
+
 
 # Training outputs
-results/
-*.log
 nohup.out
 
 # Python cache
