@@ -284,7 +284,6 @@ def create_dataloader(tagged_data, tokenizer, max_len, batch_size,
     # Detect dataset type
     if 'prompt' in first_item and 'solution' in first_item:
         # HumanEval format
-        print("DEBUG: Detected HumanEval format, using HumanEval dataloader")
         return create_humaneval_dataloader(
             tagged_data,
             tokenizer,
@@ -295,7 +294,6 @@ def create_dataloader(tagged_data, tokenizer, max_len, batch_size,
         )
     elif 'example' in first_item:
         # GSM8K format
-        print("DEBUG: Detected GSM8K format, using GSM8K packing")
         ids = pack_gsm8k_with_tags(tagged_data, tokenizer, max_len, tag_dropout_rate)
     else:
         raise ValueError(f"Unknown dataset format. Keys: {first_item.keys()}")
