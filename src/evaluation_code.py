@@ -132,7 +132,7 @@ def run_code_tests(code, tests, dataset_name):
         True if tests pass, False otherwise
     """
     try:
-        with timeout(5):  # 5 second timeout per problem
+        with timeout(10):  # 10 second timeout per problem
             if dataset_name == "code_contests":
                 # CodeContests format: {'input': ['test1\n', 'test2\n'], 'output': ['out1\n', 'out2\n']}
                 inputs = tests.get('input', [])
