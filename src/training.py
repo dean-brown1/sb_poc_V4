@@ -261,7 +261,7 @@ def train_baseline(model, tagged_data, tokenizer, config, telemetry_logger):
             
             # Add router supervision loss
             router_loss = compute_router_loss(model, schema_tags, device)
-            loss = lm_loss + 1.0 * router_loss  # Equal weight for router supervision
+            loss = lm_loss + 3.0 * router_loss  # Equal weight for router supervision
             
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
