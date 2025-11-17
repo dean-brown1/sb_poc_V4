@@ -281,7 +281,8 @@ def create_code_dataloader(
             return {
                 'input_ids': tokens['input_ids'].squeeze(),
                 'attention_mask': tokens['attention_mask'].squeeze(),
-                'labels': tokens['input_ids'].squeeze()
+                'labels': tokens['input_ids'].squeeze(),
+                'schema_tags': torch.tensor(example['schema_tags'], dtype=torch.long)  # NEW
             }
     
     dataset = CodeDataset(tagged_data, tokenizer, max_len, tag_dropout_rate)

@@ -251,9 +251,17 @@ def train_baseline(model, tagged_data, tokenizer, config, telemetry_logger):
             if step >= training_config['total_steps']:
                 break
             
+            # Separate schema_tags from model inputs
+            schema_tags = batch.pop('schema_tags').to(device)  # [batch_size, 2]
             batch = {k: v.to(device) for k, v in batch.items()}
+            
+            # Forward pass
             outputs = model(**batch)
-            loss = outputs.loss
+            lm_loss = outputs.loss
+            
+            # Add router supervision loss
+            router_loss = compute_router_loss(model, schema_tags, device)
+            loss = lm_loss + 1.0 * router_loss  # Equal weight for router supervision
             
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
@@ -266,8 +274,11 @@ def train_baseline(model, tagged_data, tokenizer, config, telemetry_logger):
             
             # Log metrics
             telemetry_logger.log_step(step + 1, {
-                'stage': 'baseline_training',
+                'stage': 'stage1_router_pretrain',
                 'loss': loss.item(),
+                'lm_loss': lm_loss.item(),
+                'router_loss': router_loss.item(),
+                'tag_dropout': dropout_rate,
                 'lr': optimizer.param_groups[0]['lr'],
                 'grad_norm': grad_norm
             })
@@ -660,6 +671,36 @@ def train_stage3_joint(model, tagged_data, tokenizer, config, telemetry_logger):
     
     return model
 
+def compute_router_loss(model, schema_tags, device):
+    """
+    Compute cross-entropy loss between router predictions and target tags
+    
+    Args:
+        model: Model with schemabank_adapters
+        schema_tags: [batch_size, 2] tensor of target schema IDs
+        device: Device
+        
+    Returns:
+        router_loss: Scalar loss
+    """
+    if not hasattr(model, 'schemabank_adapters'):
+        return torch.tensor(0.0).to(device)
+    
+    total_loss = 0.0
+    num_adapters = len(model.schemabank_adapters)
+    
+    for adapter in model.schemabank_adapters:
+        # Get router logits (shape: [batch_size, num_schemas])
+        router_logits = adapter.last_router_logits  # We need to store this during forward
+        
+        if router_logits is not None:
+            # Cross-entropy with both target schemas
+            loss_fn = torch.nn.CrossEntropyLoss()
+            loss1 = loss_fn(router_logits, schema_tags[:, 0])
+            loss2 = loss_fn(router_logits, schema_tags[:, 1])
+            total_loss += (loss1 + loss2) / 2
+    
+    return total_loss / num_adapters if num_adapters > 0 else torch.tensor(0.0).to(device)
 
 def train_schemabank(model, tagged_data, tokenizer, config, telemetry_logger):
     """

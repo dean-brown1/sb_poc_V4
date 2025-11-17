@@ -61,6 +61,10 @@ class SchemaBank(nn.Module):
 
         # Router selection: top-k sparse softmax
         sc = self.router(h)  # (B, T, S)
+
+            # STORE ROUTER LOGITS FOR SUPERVISION
+        self.last_router_logits = sc.mean(dim=1)  # Average over sequence -> (B, S)
+
         idx = sc.topk(self.topk, dim=-1).indices
         m = torch.zeros_like(sc).scatter_(-1, idx, 1.0)  # Sparse mask
         g = F.softmax(sc, dim=-1) * m  # Masked softmax
