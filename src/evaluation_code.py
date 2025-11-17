@@ -5,9 +5,12 @@ Code Evaluation
 
 Unified evaluation for code generation datasets.
 """
-
+import signal
+from contextlib import contextmanager
 import torch
 from tqdm import tqdm
+import io
+import sys
 
 
 def eval_code_passk(
@@ -100,6 +103,22 @@ def eval_code_passk(
     }
 
 
+import signal
+from contextlib import contextmanager
+
+@contextmanager
+def timeout(seconds):
+    """Timeout context manager"""
+    def handler(signum, frame):
+        raise TimeoutError("Test execution timed out")
+    
+    signal.signal(signal.SIGALRM, handler)
+    signal.alarm(seconds)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+
 def run_code_tests(code, tests, dataset_name):
     """
     Run unit tests on generated code
@@ -113,23 +132,47 @@ def run_code_tests(code, tests, dataset_name):
         True if tests pass, False otherwise
     """
     try:
-        exec_globals = {}
+        with timeout(5):  # 5 second timeout per problem
+            if dataset_name == "code_contests":
+                # CodeContests format: {'input': ['test1\n', 'test2\n'], 'output': ['out1\n', 'out2\n']}
+                inputs = tests.get('input', [])
+                outputs = tests.get('output', [])
+                
+                if not inputs or not outputs:
+                    return False
+                
+                # Test each input/output pair
+                for test_input, expected_output in zip(inputs, outputs):
+                    exec_globals = {}
+                    
+                    # Redirect stdin and stdout
+                    old_stdin = sys.stdin
+                    old_stdout = sys.stdout
+                    
+                    try:
+                        sys.stdin = io.StringIO(test_input)
+                        sys.stdout = io.StringIO()
+                        
+                        # Execute the code
+                        exec(code, exec_globals)
+                        
+                        # Get output
+                        actual_output = sys.stdout.getvalue()
+                        
+                        # Compare (strip whitespace)
+                        if actual_output.strip() != expected_output.strip():
+                            return False
+                    
+                    finally:
+                        sys.stdin = old_stdin
+                        sys.stdout = old_stdout
+                
+                return True
+            
+            return False
         
-        # Execute the generated code
-        exec(code, exec_globals)
-        
-        # Run tests based on dataset format
-        if dataset_name == "code_contests":
-            # CodeContests: tests is a list of assertion strings
-            for test in tests:
-                exec(test, exec_globals)
-        
-       
-        return True
-        
-    except Exception as e:
+    except (Exception, TimeoutError) as e:
         return False
-
 
 def eval_code_quick(
     model,
