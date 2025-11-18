@@ -683,37 +683,21 @@ def train_stage3_joint(model, tagged_data, tokenizer, config, telemetry_logger):
 
 def compute_router_loss(model, schema_tags, device):
     if not hasattr(model, 'schemabank_adapters'):
-        print("DEBUG: No schemabank_adapters!")
         return torch.tensor(0.0, device=device)
-    
-    print(f"DEBUG: Found {len(model.schemabank_adapters)} adapters")
     
     total_loss = 0.0
     num_adapters = 0
     
-    for i, adapter in enumerate(model.schemabank_adapters):
-        if not hasattr(adapter, 'last_router_logits'):
-            print(f"DEBUG: Adapter {i} missing last_router_logits!")
-            continue
-            
-        router_logits = adapter.last_router_logits
-        
-        if router_logits is None:
-            print(f"DEBUG: Adapter {i} logits are None!")
-            continue
-        
-        print(f"DEBUG: Adapter {i} logits shape: {router_logits.shape}, schema_tags shape: {schema_tags.shape}")
-        
-        loss_fn = torch.nn.CrossEntropyLoss()
-        loss1 = loss_fn(router_logits, schema_tags[:, 0])
-        loss2 = loss_fn(router_logits, schema_tags[:, 1])
-        total_loss += (loss1 + loss2) / 2.0
-        num_adapters += 1
-        print(f"DEBUG: Adapter {i} loss1={loss1.item():.4f}, loss2={loss2.item():.4f}")
+    for adapter in model.schemabank_adapters:
+        if hasattr(adapter, 'last_router_logits') and adapter.last_router_logits is not None:
+            router_logits = adapter.last_router_logits
+            loss_fn = nn.CrossEntropyLoss()
+            loss1 = loss_fn(router_logits, schema_tags[:, 0])
+            loss2 = loss_fn(router_logits, schema_tags[:, 1])
+            total_loss += (loss1 + loss2) / 2.0
+            num_adapters += 1
     
-    final_loss = total_loss / num_adapters if num_adapters > 0 else torch.tensor(0.0, device=device)
-    print(f"DEBUG: Final router_loss = {final_loss.item():.4f}")
-    return final_loss
+    return total_loss / num_adapters if num_adapters > 0 else torch.tensor(0.0, device=device)
 
 def train_schemabank(model, tagged_data, tokenizer, config, telemetry_logger):
     """
