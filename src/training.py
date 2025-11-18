@@ -392,10 +392,18 @@ def train_stage1_router(model, tagged_data, tokenizer, config, telemetry_logger)
             dataloader_iter = iter(dataloader)
             batch = next(dataloader_iter)
         
+        # Separate schema_tags from model inputs
+        schema_tags = batch.pop('schema_tags').to(device)  # [batch_size, 2]
         batch = {k: v.to(device) for k, v in batch.items()}
+
+        # Forward pass
         outputs = model(**batch)
-        loss = outputs.loss
-        
+        lm_loss = outputs.loss
+
+        # Add router supervision loss
+        router_loss = compute_router_loss(model, schema_tags, device)
+        loss = lm_loss + 3.0 * router_loss        
+
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
         grad_norm = torch.nn.utils.clip_grad_norm_(
@@ -409,6 +417,8 @@ def train_stage1_router(model, tagged_data, tokenizer, config, telemetry_logger)
         telemetry_logger.log_step(step + 1, {
             'stage': 'stage1_router_pretrain',
             'loss': loss.item(),
+            'lm_loss': lm_loss.item(),
+            'router_loss': router_loss.item(),  # ADD THIS
             'tag_dropout': dropout_rate,
             'lr': optimizer.param_groups[0]['lr'],
             'grad_norm': grad_norm
