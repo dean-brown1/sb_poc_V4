@@ -2,10 +2,9 @@
 *.backup
 *_backup.py
 
-
-
 # Training outputs
 nohup.out
+results/
 
 # Python cache
 __pycache__/
@@ -15,3 +14,11 @@ __pycache__/
 # Virtual environment
 ai-venv/
 venv/
+
+# IDE/Editor settings
+.claude/
+.vscode/
+
+# Environment files
+.env
+.env.*

@@ -1,5 +1,3 @@
-# SchemaBank POC V4
-
 # SchemaBank: Sparse Routing as Training Curriculum
 
 **Parameter-efficient fine-tuning through structured routing-based training**
@@ -65,8 +63,8 @@ Input → Transformer Layers → [Last-2 layers with SchemaBank] → Output
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/schemabank
-cd schemabank
+git clone https://github.com/dean-brown1/sb_poc_V4
+cd sb_poc_V4
 
 # Create virtual environment
 python -m venv venv
@@ -78,9 +76,9 @@ pip install -r requirements.txt
 
 **Requirements:**
 - Python 3.10+
-- PyTorch 2.8.0
-- Transformers 4.56.1
-- CUDA-capable GPU (tested on RTX 5000 Ada, 32GB VRAM)
+- PyTorch 2.1+
+- Transformers 4.40+
+- CUDA-capable GPU (16GB+ VRAM recommended)
 
 ## Quick Start
 
@@ -233,7 +231,7 @@ The routing mechanism during training provides:
 - **Model**: Qwen/Qwen2-0.5B (base model, not instruction-tuned)
 - **Training**: 10 epochs = 18,680 steps (batch_size=1, grad_accum=4)
 - **Seeds**: 42, 123, 456, 789 (all tested)
-- **Hardware**: RTX 5000 Ada (32GB VRAM)
+- **Hardware**: CUDA-capable GPU (16GB+ VRAM recommended)
 
 ### Random Seed Control
 ```python
@@ -263,9 +261,9 @@ results/schemabank_10epochs_seed42/
 ```bibtex
 @software{schemabank2025,
   title={SchemaBank: Sparse Routing as Training Curriculum for Parameter-Efficient Fine-Tuning},
-  author={[Your Name]},
+  author={Dean Brown},
   year={2025},
-  url={https://github.com/yourusername/schemabank}
+  url={https://github.com/dean-brown1/sb_poc_V4}
 }
 ```
 
@@ -286,7 +284,7 @@ Built on:
 
 ## License
 
-[To be determined]
+MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 

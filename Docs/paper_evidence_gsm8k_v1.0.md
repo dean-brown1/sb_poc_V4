@@ -353,7 +353,7 @@ At Convergence (Epoch 10):
 ## Computational Requirements
 
 ### Per Training Run
-- **Hardware:** AMD Threadripper Pro 7965WX (24 cores), RTX 5000 Ada (32GB VRAM)
+- **Hardware:** CUDA-capable GPU (16GB+ VRAM recommended)
 - **Time per epoch:** ~5 minutes (7,473 training steps)
 - **Total time (10 epochs):** ~50 minutes per run
 - **Iteration speed:** Stable 2.3s/it for SchemaBank
@@ -362,7 +362,6 @@ At Convergence (Epoch 10):
 - **Baseline:** 20 runs × 50 min = ~16.7 hours
 - **SchemaBank:** 20 runs × 50 min = ~16.7 hours
 - **Total:** ~33.4 hours of compute
-- **Cost:** Negligible on owned hardware
 
 ---
 
