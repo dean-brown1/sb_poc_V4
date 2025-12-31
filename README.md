@@ -2,18 +2,20 @@
 
 **Parameter-efficient fine-tuning through structured routing-based training**
 
+📄 **[Read the full paper](Docs/SchemaBank_Paper.pdf)**
+
 ## Overview
 
-SchemaBank demonstrates that sparse routing mechanisms, when used as a **training curriculum** rather than an inference tool, dramatically improve LoRA adapter learning. Training with routing then removing it at inference achieves **3.4x better accuracy** than baseline LoRA on GSM8K mathematical reasoning.
+SchemaBank demonstrates that sparse routing mechanisms, when used as a **training curriculum** rather than an inference tool, dramatically improve LoRA adapter learning. Training with routing then removing it at inference achieves **3x better accuracy** than baseline LoRA on GSM8K mathematical reasoning.
 
-### Key Results (10 Epochs, 4 Seeds)
+### Key Results (Epoch 6 Peak, 4 Seeds)
 
 | Method | Mean Accuracy | Std Dev | Improvement |
 |--------|---------------|---------|-------------|
-| **Baseline** (LoRA only) | 3.05% | ±1.30% | - |
-| **SchemaBank** (trained with routing) | **10.35%** | ±0.55% | **+239%** |
+| **Baseline** (LoRA only) | 3.75% | ±1.50% | - |
+| **SchemaBank** (trained with routing) | **11.8%** | ±1.30% | **3.1x** |
 
-**Critical Finding:** SchemaBank provides both higher performance AND 2.4x better stability.
+**Critical Finding:** SchemaBank provides both higher performance AND lower variance across seeds.
 
 ## Architecture
 
